@@ -11,25 +11,44 @@ export type GetRecordsOptions = {
   /** Max 3 filtry, klíč jen [a-zA-Z0-9_], hodnota vždy exact-match — viz UCA docs/API.md. */
   filter?: Record<string, string>;
   perPage?: number;
+  /** Jen pro getRecordsPage — UCA stránkuje standardně (?page=N), max per_page je 50 (server-side cap). */
+  page?: number;
   revalidateSeconds?: number;
 };
 
-export async function getRecords(collection: string, options: GetRecordsOptions = {}): Promise<UcaRecord[]> {
+function buildQuery(options: GetRecordsOptions): string {
   const query = new URLSearchParams();
   if (options.status) query.set("status", options.status);
   if (options.perPage) query.set("per_page", String(options.perPage));
+  if (options.page) query.set("page", String(options.page));
   if (options.filter) {
     for (const [key, value] of Object.entries(options.filter)) {
       query.set(`filter[${key}]`, value);
     }
   }
+  return query.toString();
+}
 
-  const suffix = query.toString() ? `?${query.toString()}` : "";
-  const response = await ucaJsonRequest<UcaPaginatedResponse<UcaRecord>>(recordsPath(collection, suffix), {
+export async function getRecords(collection: string, options: GetRecordsOptions = {}): Promise<UcaRecord[]> {
+  const suffix = buildQuery(options);
+  const response = await ucaJsonRequest<UcaPaginatedResponse<UcaRecord>>(recordsPath(collection, suffix ? `?${suffix}` : ""), {
     method: "GET",
     revalidateSeconds: options.revalidateSeconds,
   });
   return response.data;
+}
+
+/**
+ * Stejné jako getRecords, ale vrací celou stránkovanou odpověď (vč.
+ * `meta.last_page`) — pro volající, kteří potřebují projít víc než
+ * jednu stránku (např. sečíst všechny záznamy napříč stránkami).
+ */
+export async function getRecordsPage(collection: string, options: GetRecordsOptions = {}): Promise<UcaPaginatedResponse<UcaRecord>> {
+  const suffix = buildQuery(options);
+  return ucaJsonRequest<UcaPaginatedResponse<UcaRecord>>(recordsPath(collection, suffix ? `?${suffix}` : ""), {
+    method: "GET",
+    revalidateSeconds: options.revalidateSeconds,
+  });
 }
 
 export async function getRecord(collection: string, id: number): Promise<UcaRecord> {

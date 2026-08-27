@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import GlobalStatsLine from "./components/GlobalStatsLine";
+import PromotionSlot from "./components/promotions/PromotionSlot";
 import { SITE_DESCRIPTION, SITE_TITLE, SUBTAGLINE, TAGLINE } from "./config/site";
+
+const PATHNAME = "/";
 
 export const metadata: Metadata = {
   title: SITE_TITLE,
@@ -37,9 +41,17 @@ export default function Home() {
         >
           JDU PROHRÁT
         </Link>
+
+        <div className="mt-6">
+          <GlobalStatsLine />
+        </div>
       </div>
 
-      <div className="mx-auto mt-20 max-w-2xl">
+      <div className="mx-auto mt-12 max-w-2xl">
+        <PromotionSlot placement="homepage_top" pathname={PATHNAME} />
+      </div>
+
+      <div className="mx-auto mt-12 max-w-2xl">
         <h2 className="text-center font-serif text-2xl font-bold text-neon-cyan">Naše férové podmínky</h2>
         <dl className="mt-6 divide-y divide-white/10 rounded-xl border border-white/10 bg-white/5">
           {FAIR_TERMS.map((term) => (
@@ -49,6 +61,10 @@ export default function Home() {
             </div>
           ))}
         </dl>
+      </div>
+
+      <div className="mx-auto mt-12 max-w-2xl">
+        <PromotionSlot placement="homepage_middle" pathname={PATHNAME} />
       </div>
     </div>
   );

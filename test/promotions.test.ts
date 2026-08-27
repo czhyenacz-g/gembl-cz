@@ -52,4 +52,23 @@ describe("pickPromotion", () => {
       assert.ok(picked && ["a", "b"].includes(picked.id));
     }
   });
+
+  test("promotion s href === aktuální pathname se nikdy nevybere (banner na stránku, kde se právě zobrazuje, nedává smysl)", () => {
+    const selfLinking = { pagePattern: "*", weight: 1000, id: "self", href: "/automaty" };
+    const other = { pagePattern: "*", weight: 1, id: "other", href: "https://example.com/product" };
+
+    for (let i = 0; i < 20; i++) {
+      assert.equal(pickPromotion([selfLinking, other], "/automaty")?.id, "other");
+    }
+  });
+
+  test("href jinam než aktuální pathname zůstává eligible", () => {
+    const candidate = { pagePattern: "*", weight: 1, id: "a", href: "/automaty" };
+    assert.equal(pickPromotion([candidate], "/")?.id, "a");
+  });
+
+  test("promotion bez href se self-referencing filtrem nikdy nevyřadí", () => {
+    const candidate = { pagePattern: "*", weight: 1, id: "a" };
+    assert.equal(pickPromotion([candidate], "/automaty")?.id, "a");
+  });
 });

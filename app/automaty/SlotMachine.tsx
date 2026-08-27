@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { checkNewAchievements, type Achievement } from "../../lib/casino/achievements";
 import { pickRandomMessage } from "../../lib/casino/messages";
+import { reportGameStatsDeltaClient } from "../../lib/casino/report-stats-client";
 import { spin } from "../../lib/casino/slot-engine";
 import { loadPlayerState, resetPlayerState, savePlayerState } from "../../lib/casino/storage";
 import type { PlayerState, SlotSymbol } from "../../lib/casino/types";
@@ -12,6 +13,12 @@ import Reel from "./Reel";
 
 const SPIN_ANIMATION_MS = 900;
 const JACKPOT_FLASH_MS = 800;
+const GAME_ID = "automaty";
+// Globální statistiky se reportují v DÁVKÁCH, ne po každém spinu (viz
+// zadání "aby každý spin neznamenal zbytečně drahou operaci") — po 10
+// spinech, nebo dřív, když hráč stránku opustí/schová tab (viz
+// visibilitychange/pagehide níž), ať se nic neztratí.
+const FLUSH_EVERY_N_SPINS = 10;
 
 type ToastItem = { key: number; title: string };
 
@@ -30,6 +37,7 @@ export default function SlotMachine() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const toastKeyRef = useRef(0);
+  const pendingStatsRef = useRef({ spins: 0, wagered: 0, won: 0 });
 
   // Stav se čte z localStorage až po mountu (server o něm neví) — stejný
   // vzor jako BalanceBadge/getOrCreateAnonymousId napříč projekty, ať
@@ -38,6 +46,34 @@ export default function SlotMachine() {
     setPlayer(loadPlayerState());
     setMounted(true);
   }, []);
+
+  // Stabilní identita (useCallback, prázdné deps) — čte/píše jen refy,
+  // takže je bezpečné ji použít v efektu níž bez re-registrace listenerů.
+  const flushPendingStats = useCallback((resets = 0) => {
+    const pending = pendingStatsRef.current;
+    if (pending.spins === 0 && pending.wagered === 0 && pending.won === 0 && resets === 0) return;
+
+    reportGameStatsDeltaClient({ game: GAME_ID, spins: pending.spins, wagered: pending.wagered, won: pending.won, resets });
+    pendingStatsRef.current = { spins: 0, wagered: 0, won: 0 };
+  }, []);
+
+  // Odešle, co se zatím nashromáždilo, i když hráč nedohraje na násobek
+  // 10 spinů — jinak by se poslední nedokončená dávka ztratila.
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") flushPendingStats();
+    }
+    function handlePageHide() {
+      flushPendingStats();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, [flushPendingStats]);
 
   function pushToast(title: string) {
     const key = ++toastKeyRef.current;
@@ -75,6 +111,11 @@ export default function SlotMachine() {
       setReels(result.reels);
       setSpinning(false);
 
+      pendingStatsRef.current.spins += 1;
+      pendingStatsRef.current.wagered += SPIN_COST;
+      pendingStatsRef.current.won += result.payout;
+      if (pendingStatsRef.current.spins >= FLUSH_EVERY_N_SPINS) flushPendingStats();
+
       for (const achievement of newAchievements) pushToast(achievement.title);
 
       if (result.isTripleMatch) {
@@ -90,6 +131,9 @@ export default function SlotMachine() {
   }
 
   function handleResetConfirm() {
+    // Odešle, co se zatím nashromáždilo, a ve STEJNÉ dávce i sám reset —
+    // ne dva samostatné requesty.
+    flushPendingStats(1);
     const fresh = resetPlayerState();
     setPlayer(fresh);
     setReels(null);

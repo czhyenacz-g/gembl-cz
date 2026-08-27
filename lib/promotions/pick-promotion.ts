@@ -9,14 +9,20 @@ const SPECIFICITY_RANK: Record<RouteMatchSpecificity, number> = {
   global: 1,
 };
 
-export function pickPromotion<T extends { pagePattern: string; weight: number }>(
+export function pickPromotion<T extends { pagePattern: string; weight: number; href?: string }>(
   candidates: T[],
   pathname: string
 ): T | null {
+  // Promotion, jejíž href míří přesně na stránku, kde se právě
+  // zobrazuje, nedává smysl (banner na "/automaty" zobrazený na
+  // samotné /automaty) — vyřazuje se ještě před specificity/weight
+  // výběrem. Ověřený fix z HowToFish.cz, přenesený beze změny.
+  const eligible = candidates.filter((candidate) => candidate.href !== pathname);
+
   let bestRank = 0;
   let bestGroup: T[] = [];
 
-  for (const candidate of candidates) {
+  for (const candidate of eligible) {
     const specificity = matchSpecificity(candidate.pagePattern, pathname);
     if (!specificity) continue;
 

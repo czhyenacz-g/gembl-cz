@@ -62,3 +62,28 @@ test("SlotMachine.tsx: čte/ukládá stav přes storage.ts (loadPlayerState/save
   assert.match(source, /import \{ loadPlayerState, resetPlayerState, savePlayerState \} from "\.\.\/\.\.\/lib\/casino\/storage"/);
   assert.doesNotMatch(source, /localStorage\.(get|set)Item/);
 });
+
+test("SlotMachine.tsx: globální statistiky se reportují v dávkách (po FLUSH_EVERY_N_SPINS), ne po každém jednotlivém spinu", () => {
+  assert.match(source, /const FLUSH_EVERY_N_SPINS = 10;/);
+  const spinHandler = /function handleSpin\(\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
+  assert.match(spinHandler, /pendingStatsRef\.current\.spins \+= 1;/);
+  assert.match(spinHandler, /pendingStatsRef\.current\.wagered \+= SPIN_COST;/);
+  assert.match(spinHandler, /if \(pendingStatsRef\.current\.spins >= FLUSH_EVERY_N_SPINS\) flushPendingStats\(\);/);
+  // Report se NEVOLÁ přímo v handleSpin mimo flushPendingStats — jinak by šlo o report na každý spin.
+  assert.doesNotMatch(spinHandler, /reportGameStatsDeltaClient\(/);
+});
+
+test("SlotMachine.tsx: nedokončená dávka se odešle při odchodu ze stránky (visibilitychange hidden + pagehide)", () => {
+  assert.match(source, /document\.addEventListener\("visibilitychange", handleVisibilityChange\)/);
+  assert.match(source, /window\.addEventListener\("pagehide", handlePageHide\)/);
+  assert.match(source, /if \(document\.visibilityState === "hidden"\) flushPendingStats\(\);/);
+});
+
+test("SlotMachine.tsx: reset odešle nedokončenou dávku SE započítaným resetem (jeden request, ne dva)", () => {
+  const resetHandler = /function handleResetConfirm\(\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
+  assert.match(resetHandler, /flushPendingStats\(1\);/);
+});
+
+test("SlotMachine.tsx: flushPendingStats má stabilní identitu (useCallback, prázdné deps)", () => {
+  assert.match(source, /const flushPendingStats = useCallback\(\(resets = 0\) => \{[\s\S]*?\n {2}\}, \[\]\);/);
+});

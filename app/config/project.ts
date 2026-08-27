@@ -32,9 +32,9 @@ export const projectConfig: ProjectConfig = {
   domain: "gembl.cz",
 
   features: {
-    uca: false,
+    uca: true,
     assets: false,
-    promotions: false,
+    promotions: true,
     steamAuth: false,
     streams: false,
     feedback: false,

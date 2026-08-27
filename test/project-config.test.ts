@@ -14,9 +14,13 @@ describe("projectConfig", () => {
     }
   });
 
-  test("defaultně jsou všechny features vypnuté (starter sám nic nezapíná)", () => {
-    for (const value of Object.values(projectConfig.features)) {
-      assert.equal(value, false);
-    }
+  test("uca a promotions jsou zapnuté (Gembl.cz je skutečně používá), zbytek zůstává vypnutý", () => {
+    assert.equal(projectConfig.features.uca, true);
+    assert.equal(projectConfig.features.promotions, true);
+    assert.equal(projectConfig.features.assets, false);
+    assert.equal(projectConfig.features.steamAuth, false);
+    assert.equal(projectConfig.features.streams, false);
+    assert.equal(projectConfig.features.feedback, false);
+    assert.equal(projectConfig.features.communitySubmissions, false);
   });
 });
