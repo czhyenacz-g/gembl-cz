@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Neonový text-glow — Tailwind core nemá text-shadow utility, plugin
+   kvůli třem třídám nepotřebujeme. Použití: className="text-glow-pink". */
+@layer utilities {
+  .text-glow-pink {
+    text-shadow: 0 0 12px rgba(255, 46, 154, 0.8), 0 0 28px rgba(255, 46, 154, 0.35);
+  }
+  .text-glow-cyan {
+    text-shadow: 0 0 12px rgba(34, 229, 255, 0.7), 0 0 28px rgba(34, 229, 255, 0.3);
+  }
+  .text-glow-gold {
+    text-shadow: 0 0 10px rgba(255, 204, 51, 0.7);
+  }
+}
+
+/* Roztočení válců — jedna jednoduchá keyframe animace, žádná externí
+   knihovna. Aplikuje se jen na dobu spinu (viz Reel.tsx). */
+@keyframes reel-spin {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
+.animate-reel-spin {
+  animation: reel-spin 0.15s linear infinite;
+}
