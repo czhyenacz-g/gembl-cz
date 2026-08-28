@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SPIN_COST, STARTING_CREDITS } from "../config/site";
+import { SPIN_COST, STARTING_CREDITS } from "../../config/site";
 
 const TITLE = "Jak to funguje";
 const DESCRIPTION = "Virtuální kredity, žádné skutečné peníze, výhra vždy 0 G. Jasně a bez malého písma.";

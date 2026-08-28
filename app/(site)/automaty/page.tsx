@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import PromotionSlot from "../components/promotions/PromotionSlot";
+import PromotionSlot from "../../components/promotions/PromotionSlot";
 import SlotMachine from "./SlotMachine";
 
 const PATHNAME = "/automaty";

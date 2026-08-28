@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { checkNewAchievements, type Achievement } from "../../lib/casino/achievements";
-import { pickRandomMessage } from "../../lib/casino/messages";
-import { reportGameStatsDeltaClient } from "../../lib/casino/report-stats-client";
-import { spin } from "../../lib/casino/slot-engine";
-import { loadPlayerState, resetPlayerState, savePlayerState } from "../../lib/casino/storage";
-import type { PlayerState, SlotSymbol } from "../../lib/casino/types";
-import { SPIN_COST } from "../config/site";
+import { checkNewAchievements, type Achievement } from "../../../lib/casino/achievements";
+import { pickRandomMessage } from "../../../lib/casino/messages";
+import { reportGameStatsDeltaClient } from "../../../lib/casino/report-stats-client";
+import { spin } from "../../../lib/casino/slot-engine";
+import { loadPlayerState, resetPlayerState, savePlayerState } from "../../../lib/casino/storage";
+import type { PlayerState, SlotSymbol } from "../../../lib/casino/types";
+import { SPIN_COST } from "../../config/site";
 import AchievementToast from "./AchievementToast";
 import Reel from "./Reel";
 

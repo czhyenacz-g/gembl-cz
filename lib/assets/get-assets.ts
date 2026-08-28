@@ -1,5 +1,5 @@
 import "server-only";
-import { getRecords } from "../uca/records.ts";
+import { getRecord, getRecords } from "../uca/records.ts";
 import type { UcaRecord } from "../uca/types.ts";
 import type { Asset } from "./types.ts";
 
@@ -8,6 +8,10 @@ import type { Asset } from "./types.ts";
 // vlastní endpoint, jen mapování na pohodlný typ nad existujícím
 // generic records API.
 const COLLECTION = "assets";
+// Statická, adminem spravovaná grafika se nemění za běhu — bezpečné
+// cachovat déle než dynamický obsah (stejné okno jako u HowToFish.cz
+// referenční implementace getAssetById).
+const ASSET_REVALIDATE_SECONDS = 300;
 
 function mapRecordToAsset(record: UcaRecord): Asset | null {
   const data = record.data;
@@ -48,4 +52,17 @@ export async function getAssetsByTag(tag: string): Promise<Asset[]> {
   const assets = await getAssets();
   const normalized = tag.trim().toLowerCase();
   return assets.filter((asset) => asset.tags.some((t) => t.toLowerCase() === normalized));
+}
+
+/**
+ * Jeden konkrétní asset podle ID (admin ho ručně vybral, ne "poslední
+ * nahraný") — pro místa, kde stránka cíleně odkazuje na KONKRÉTNÍ
+ * obrázek (např. coming-soon plakát na homepage). `null` když asset
+ * neexistuje, nemá médium, nebo je UCA nedostupné — volající musí mít
+ * bezpečný fallback, nikdy ne rozbitý/chybějící obrázek.
+ */
+export async function getAssetById(id: number): Promise<Asset | null> {
+  const record = await getRecord(COLLECTION, id, { revalidateSeconds: ASSET_REVALIDATE_SECONDS }).catch(() => null);
+  if (!record) return null;
+  return mapRecordToAsset(record);
 }

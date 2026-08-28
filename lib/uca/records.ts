@@ -51,8 +51,15 @@ export async function getRecordsPage(collection: string, options: GetRecordsOpti
   });
 }
 
-export async function getRecord(collection: string, id: number): Promise<UcaRecord> {
-  const response = await ucaJsonRequest<{ data: UcaRecord }>(recordsPath(collection, `/${id}`), { method: "GET" });
+export async function getRecord(
+  collection: string,
+  id: number,
+  options: Pick<GetRecordsOptions, "revalidateSeconds"> = {}
+): Promise<UcaRecord> {
+  const response = await ucaJsonRequest<{ data: UcaRecord }>(recordsPath(collection, `/${id}`), {
+    method: "GET",
+    revalidateSeconds: options.revalidateSeconds,
+  });
   return response.data;
 }
 

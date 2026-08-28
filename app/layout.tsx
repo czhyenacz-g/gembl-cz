@@ -3,8 +3,6 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
-import Footer from "./components/Footer";
-import Header from "./components/Header";
 import { GOATCOUNTER_CODE } from "./config/analytics";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "./config/site";
 
@@ -55,9 +53,7 @@ export default function RootLayout({
   return (
     <html lang="cs" className={`${playfairDisplay.variable} ${inter.variable}`}>
       <body className="flex min-h-screen flex-col bg-gembl-paper font-sans text-gembl-ink antialiased">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        {children}
         <Analytics />
         {GOATCOUNTER_CODE && (
           <Script

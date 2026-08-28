@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 // framework-vázané testy v jiných projektech (žádný DOM test harness
 // v tomhle starteru). Čistá herní logika je testovaná přímo
 // (slot-engine.test.ts, achievements.test.ts, casino-storage.test.ts).
-const source = readFileSync(fileURLToPath(new URL("../app/automaty/SlotMachine.tsx", import.meta.url)), "utf8");
+const source = readFileSync(fileURLToPath(new URL("../app/(site)/automaty/SlotMachine.tsx", import.meta.url)), "utf8");
 
 test("SlotMachine.tsx: je 'use client'", () => {
   const firstLine = source.trimStart().split("\n")[0];
@@ -15,7 +15,7 @@ test("SlotMachine.tsx: je 'use client'", () => {
 });
 
 test("SlotMachine.tsx: SPIN_COST se importuje ze sdíleného config, není zadrátovaný napevno", () => {
-  assert.match(source, /import \{ SPIN_COST \} from "\.\.\/config\/site"/);
+  assert.match(source, /import \{ SPIN_COST \} from "\.\.\/\.\.\/config\/site"/);
   assert.doesNotMatch(source, /const SPIN_COST = \d+/);
 });
 
@@ -59,7 +59,7 @@ test("SlotMachine.tsx: žádný setInterval (polling) — jen jednorázové setT
 });
 
 test("SlotMachine.tsx: čte/ukládá stav přes storage.ts (loadPlayerState/savePlayerState/resetPlayerState), ne přímo localStorage", () => {
-  assert.match(source, /import \{ loadPlayerState, resetPlayerState, savePlayerState \} from "\.\.\/\.\.\/lib\/casino\/storage"/);
+  assert.match(source, /import \{ loadPlayerState, resetPlayerState, savePlayerState \} from "\.\.\/\.\.\/\.\.\/lib\/casino\/storage"/);
   assert.doesNotMatch(source, /localStorage\.(get|set)Item/);
 });
 

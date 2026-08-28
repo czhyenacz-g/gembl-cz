@@ -1,7 +1,7 @@
 "use client";
 
-import { SYMBOL_DISPLAY } from "../../lib/casino/slot-engine";
-import type { SlotSymbol } from "../../lib/casino/types";
+import { SYMBOL_DISPLAY } from "../../../lib/casino/slot-engine";
+import type { SlotSymbol } from "../../../lib/casino/types";
 
 // Jeden válec — během roztočení ukazuje rozmazanou smyčku symbolů (viz
 // .animate-reel-spin v globals.css), po doběhnutí vykreslí skutečný

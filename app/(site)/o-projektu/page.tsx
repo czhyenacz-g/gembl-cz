@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DISCLAIMER } from "../config/site";
+import { DISCLAIMER } from "../../config/site";
 
 const TITLE = "O projektu";
 const DESCRIPTION = "Co je GEMBL.cz, proč vznikl a proč to není skutečné hazardní hraní.";
