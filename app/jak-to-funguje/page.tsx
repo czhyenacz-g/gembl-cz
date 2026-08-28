@@ -13,14 +13,14 @@ export const metadata: Metadata = {
 
 export default function JakToFungujePage() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-16 text-gray-300">
-      <h1 className="font-serif text-3xl font-extrabold text-white sm:text-4xl">Jak to funguje</h1>
-      <p className="mt-4 text-lg text-gray-400">
+    <div className="mx-auto max-w-2xl px-4 py-16 text-gembl-ink">
+      <h1 className="gembl-masthead inline-block text-3xl font-black sm:text-4xl">Jak to funguje</h1>
+      <p className="mt-4 text-lg text-gembl-muted">
         GEMBL.cz vypadá jako online kasino, ale chová se úplně jinak — a to je celý smysl.
       </p>
 
       <section className="mt-10">
-        <h2 className="font-serif text-xl text-neon-cyan">Virtuální kredity, ne peníze</h2>
+        <h2 className="gembl-section-heading inline-block text-xl">Virtuální kredity, ne peníze</h2>
         <p className="mt-3">
           Na startu dostaneš {STARTING_CREDITS.toLocaleString("cs-CZ")} G — virtuálních kreditů, které nemají žádnou
           reálnou hodnotu. Nedají se koupit, nedají se vybrat, nedají se poslat nikomu jinému. Slouží jen k tomu, abys
@@ -29,7 +29,7 @@ export default function JakToFungujePage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="font-serif text-xl text-neon-cyan">Jeden spin, jedna jistota</h2>
+        <h2 className="gembl-section-heading inline-block text-xl">Jeden spin, jedna jistota</h2>
         <p className="mt-3">
           Každé roztočení automatu stojí {SPIN_COST} G. Bez ohledu na to, co padne na válcích — i kdyby to byly tři
           stejné symboly — výhra je vždy přesně 0 G. Žádná výjimka, žádný skrytý jackpot, žádné malé písmo.
@@ -38,7 +38,7 @@ export default function JakToFungujePage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="font-serif text-xl text-neon-cyan">Proč to vůbec existuje?</h2>
+        <h2 className="gembl-section-heading inline-block text-xl">Proč to vůbec existuje?</h2>
         <p className="mt-3">
           GEMBL.cz je satira na to, jak online kasina a hazardní hry vypadají a jak se chovají — jen bez toho
           nejdůležitějšího triku. Tady víš předem, jak to dopadne, a přesně to se stane.
@@ -46,7 +46,7 @@ export default function JakToFungujePage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="font-serif text-xl text-neon-cyan">Achievementy</h2>
+        <h2 className="gembl-section-heading inline-block text-xl">Achievementy</h2>
         <p className="mt-3">
           Za hraní (ne za vyhrávání — to tu neexistuje) odemykáš drobné achievementy jako „První prohra&ldquo; nebo
           „Profesionální smolař&ldquo;. Jsou to jen odznaky, nic za ně nezískáš — stejně jako za všechno ostatní tady.
@@ -54,7 +54,7 @@ export default function JakToFungujePage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="font-serif text-xl text-neon-cyan">Tvůj postup</h2>
+        <h2 className="gembl-section-heading inline-block text-xl">Tvůj postup</h2>
         <p className="mt-3">
           Zůstatek a statistiky se ukládají jen v tvém prohlížeči (localStorage) — žádný účet, žádné přihlašování.
           Po refreshi stránky o nic nepřijdeš. Kdykoliv můžeš kariéru vynulovat tlačítkem „RESETOVAT KARIÉRU&ldquo; na

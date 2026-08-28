@@ -29,8 +29,8 @@ export default function HryPage() {
   return (
     <div className="px-4 py-12">
       <div className="mx-auto max-w-3xl text-center">
-        <h1 className="font-serif text-3xl font-extrabold text-white sm:text-4xl">Hry</h1>
-        <p className="mt-3 text-gray-400">{DESCRIPTION}</p>
+        <h1 className="gembl-masthead inline-block text-3xl font-black sm:text-4xl">Hry</h1>
+        <p className="mt-3 text-gembl-muted">{DESCRIPTION}</p>
       </div>
 
       <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">

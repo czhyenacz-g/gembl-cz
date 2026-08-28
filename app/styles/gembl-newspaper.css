@@ -1,0 +1,86 @@
+/* GEMBL.cz — novinový/plakátový design systém.
+ *
+ * Základní vizuální jazyk projektu na jednom místě (ne rozházený po
+ * jednotlivých komponentách) — CSS proměnné + malá sada sdílených
+ * utility tříd pro věci, které Tailwind sám nenabízí (masthead nadpis,
+ * tenká oddělovací linka, "razítkový" štítek, tvrdý plakátový stín).
+ *
+ * Záměrně: krémové/zašlé pozadí místo bílé, černý text, červená jen
+ * jako akcent, tenké černé linky, minimum radiusů, ŽÁDNÉ gradienty,
+ * glassmorphism ani neonové efekty — viz zadání. Obrázky/ilustrace
+ * jsou mimo rozsah, tohle je jen základ layoutu a stylování.
+ */
+
+:root {
+  /* Barvy */
+  --gembl-paper: #f3ede2;
+  --gembl-paper-dark: #e8dfd1;
+  --gembl-ink: #111111;
+  --gembl-red: #b32218;
+  --gembl-muted: #6c665d;
+  --gembl-line: #181818;
+
+  /* Linky */
+  --gembl-border-thin: 1px;
+  --gembl-border-thick: 3px;
+
+  /* Minimum radiusů — jedna malá hodnota, ne Tailwindí škála měkkých rohů. */
+  --gembl-radius: 2px;
+
+  /* "Plakátový" tvrdý stín — ostrý posun bez rozostření, žádný glow/blur. */
+  --gembl-shadow-hard: 4px 4px 0 var(--gembl-ink);
+  --gembl-shadow-hard-red: 4px 4px 0 var(--gembl-red);
+  --gembl-shadow-hard-sm: 2px 2px 0 var(--gembl-ink);
+}
+
+/* Masthead — velký novinový/plakátový nadpis se silnou spodní linkou
+ * (jako hlavička novin). Používej pro H1/nameplate úrovně nadpisů.
+ */
+.gembl-masthead {
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: var(--gembl-border-thick) solid var(--gembl-ink);
+  padding-bottom: 0.2em;
+}
+
+/* Menší varianta masthead pravidla — pro nadpisy sekcí (H2), tenčí linka. */
+.gembl-section-heading {
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: var(--gembl-border-thin) solid var(--gembl-line);
+  padding-bottom: 0.2em;
+}
+
+/* Tenká vodorovná oddělovací linka mezi bloky obsahu. */
+.gembl-rule {
+  border: none;
+  border-top: var(--gembl-border-thin) solid var(--gembl-line);
+}
+
+/* Základní ohraničený blok/karta — jasně oddělený okraj, bez
+ * gradientu/blur/glass efektu, minimum radiusu. */
+.gembl-block {
+  background-color: var(--gembl-paper-dark);
+  border: var(--gembl-border-thin) solid var(--gembl-ink);
+  border-radius: var(--gembl-radius);
+}
+
+/* Malý "razítkový"/kupónový štítek — nahrazuje kulaté neonové pilulky,
+ * hranatý štítek s tenkým orámováním. */
+.gembl-tag {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: var(--gembl-border-thin) solid var(--gembl-ink);
+  border-radius: var(--gembl-radius);
+  padding: 0.15em 0.6em;
+}
+
+.gembl-tag--accent {
+  border-color: var(--gembl-red);
+  color: var(--gembl-red);
+}

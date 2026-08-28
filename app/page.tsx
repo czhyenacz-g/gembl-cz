@@ -24,20 +24,20 @@ export default function Home() {
   return (
     <div className="px-4 py-16 sm:py-24">
       <div className="mx-auto max-w-2xl text-center">
-        <h1 className="font-serif text-4xl font-extrabold sm:text-6xl">
-          <span className="text-neon-pink text-glow-pink">GEMBL</span>
-          <span className="text-neon-cyan">.cz</span>
+        <h1 className="gembl-masthead inline-block font-serif text-4xl font-black sm:text-6xl">
+          <span className="text-gembl-ink">GEMBL</span>
+          <span className="text-gembl-red">.cz</span>
         </h1>
-        <p className="mt-6 font-serif text-xl font-semibold text-white sm:text-2xl">{TAGLINE}</p>
-        <p className="mt-2 text-neon-gold">{SUBTAGLINE}</p>
+        <p className="mt-6 font-serif text-xl font-bold text-gembl-ink sm:text-2xl">{TAGLINE}</p>
+        <p className="mt-2 font-semibold uppercase tracking-wide text-gembl-red">{SUBTAGLINE}</p>
 
-        <p className="mx-auto mt-8 max-w-lg text-gray-400">
+        <p className="mx-auto mt-8 max-w-lg text-gembl-muted">
           Dostaneš virtuální kredity. Můžeš je prohrát. Vyhrát nemůžeš.
         </p>
 
         <Link
           href="/automaty"
-          className="mt-8 inline-flex min-h-[52px] items-center justify-center rounded-lg bg-neon-pink px-8 py-3 font-serif text-lg font-bold text-white shadow-glow-pink transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan"
+          className="mt-8 inline-flex min-h-[52px] items-center justify-center border-2 border-gembl-ink bg-gembl-red px-8 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
         >
           JDU PROHRÁT
         </Link>
@@ -52,12 +52,12 @@ export default function Home() {
       </div>
 
       <div className="mx-auto mt-12 max-w-2xl">
-        <h2 className="text-center font-serif text-2xl font-bold text-neon-cyan">Naše férové podmínky</h2>
-        <dl className="mt-6 divide-y divide-white/10 rounded-xl border border-white/10 bg-white/5">
+        <h2 className="gembl-section-heading text-center text-2xl font-bold text-gembl-ink">Naše férové podmínky</h2>
+        <dl className="gembl-block mt-6 divide-y divide-gembl-ink">
           {FAIR_TERMS.map((term) => (
             <div key={term.label} className="flex items-center justify-between px-5 py-3 text-sm sm:text-base">
-              <dt className="text-gray-400">{term.label}</dt>
-              <dd className="font-serif font-semibold text-white">{term.value}</dd>
+              <dt className="text-gembl-muted">{term.label}</dt>
+              <dd className="font-mono font-semibold text-gembl-ink">{term.value}</dd>
             </div>
           ))}
         </dl>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bree_Serif, Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
@@ -8,8 +8,11 @@ import Header from "./components/Header";
 import { GOATCOUNTER_CODE } from "./config/analytics";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "./config/site";
 
-const breeSerif = Bree_Serif({
-  weight: "400",
+// Dramatický, vysoce kontrastní serif pro "novinový/plakátový" masthead
+// nadpisy (viz app/styles/gembl-newspaper.css) — nahrazuje předchozí
+// zaoblený Bree Serif, který k téhle estetice neseděl.
+const playfairDisplay = Playfair_Display({
+  weight: ["700", "900"],
   subsets: ["latin", "latin-ext"],
   variable: "--font-heading",
   display: "swap",
@@ -50,8 +53,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="cs" className={`${breeSerif.variable} ${inter.variable}`}>
-      <body className="flex min-h-screen flex-col bg-[#0a0014] font-sans text-white antialiased">
+    <html lang="cs" className={`${playfairDisplay.variable} ${inter.variable}`}>
+      <body className="flex min-h-screen flex-col bg-gembl-paper font-sans text-gembl-ink antialiased">
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

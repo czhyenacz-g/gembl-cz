@@ -9,9 +9,9 @@ export default async function GlobalStatsLine({ game }: { game?: string } = {}) 
   if (!stats || stats.totalSpins === 0) return null;
 
   return (
-    <p className="text-sm text-gray-500">
+    <p className="text-sm text-gembl-muted">
       Hráči na Gembl.cz už společně prohráli{" "}
-      <span className="font-semibold text-neon-gold">{stats.totalLost.toLocaleString("cs-CZ")} G</span>.
+      <span className="font-mono font-semibold text-gembl-red">{stats.totalLost.toLocaleString("cs-CZ")} G</span>.
     </p>
   );
 }

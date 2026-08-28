@@ -145,7 +145,7 @@ export default function SlotMachine() {
   if (!mounted || !player) {
     return (
       <div className="flex justify-center py-16">
-        <div className="h-28 w-64 animate-pulse rounded-lg bg-white/5" />
+        <div className="h-28 w-64 animate-pulse border border-gembl-line bg-gembl-paper-dark" />
       </div>
     );
   }
@@ -161,7 +161,7 @@ export default function SlotMachine() {
         ))}
       </div>
 
-      <div className="rounded-2xl border border-neon-purple/40 bg-gradient-to-b from-[#150025] to-[#0a0014] p-6 shadow-glow-pink sm:p-8">
+      <div className="gembl-block p-6 shadow-hard sm:p-8">
         <div className="flex items-center justify-center gap-3 sm:gap-4">
           <Reel symbol={reels ? reels[0] : null} spinning={spinning} />
           <Reel symbol={reels ? reels[1] : null} spinning={spinning} />
@@ -169,13 +169,11 @@ export default function SlotMachine() {
         </div>
 
         <div className="mt-6 min-h-[3.5rem] text-center">
-          {jackpotFlash && (
-            <p className="animate-pulse font-serif text-3xl font-extrabold text-neon-gold text-glow-gold">JACKPOT!</p>
-          )}
+          {jackpotFlash && <p className="animate-pulse font-serif text-3xl font-black uppercase text-gembl-red">JACKPOT!</p>}
           {!jackpotFlash && resultMessage && (
             <div>
-              <p className="font-serif text-xl font-bold text-white">Výhra: 0 G</p>
-              <p className="mt-1 text-sm text-gray-400">{resultMessage}</p>
+              <p className="font-serif text-xl font-bold text-gembl-ink">Výhra: 0 G</p>
+              <p className="mt-1 text-sm text-gembl-muted">{resultMessage}</p>
             </div>
           )}
         </div>
@@ -185,22 +183,22 @@ export default function SlotMachine() {
             type="button"
             onClick={handleSpin}
             disabled={!canSpin}
-            className="min-h-[52px] w-full max-w-xs rounded-lg bg-neon-pink px-6 py-3 font-serif text-lg font-bold text-white shadow-glow-pink transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan"
+            className="min-h-[52px] w-full max-w-xs border-2 border-gembl-ink bg-gembl-red px-6 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
           >
             {spinning ? "TOČÍ SE…" : `ROZTOČIT ZA ${SPIN_COST} G`}
           </button>
-          <p className="text-center text-[11px] text-gray-500">
+          <p className="text-center text-[11px] text-gembl-muted">
             Upozornění: V této hře není možné vyhrát. Spin stojí {SPIN_COST} virtuálních kreditů a výhra je vždy 0 G.
           </p>
           {player.credits < SPIN_COST && (
-            <p className="text-center text-sm text-neon-cyan">Nemáš dost kreditů. Resetuj kariéru a zkus to znovu.</p>
+            <p className="text-center text-sm font-semibold text-gembl-red">Nemáš dost kreditů. Resetuj kariéru a zkus to znovu.</p>
           )}
         </div>
       </div>
 
-      <div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-5">
-        <h2 className="font-serif text-lg text-neon-cyan">Statistiky</h2>
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+      <div className="gembl-block mt-8 p-5">
+        <h2 className="gembl-section-heading text-lg">Statistiky</h2>
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
           <StatItem label="Zůstatek" value={`${player.credits.toLocaleString("cs-CZ")} G`} />
           <StatItem label="Spinů" value={player.totalSpins.toLocaleString("cs-CZ")} />
           <StatItem label="Protočeno" value={`${player.totalWagered.toLocaleString("cs-CZ")} G`} />
@@ -214,25 +212,25 @@ export default function SlotMachine() {
           <button
             type="button"
             onClick={() => setShowResetConfirm(true)}
-            className="min-h-[44px] rounded-md border border-white/20 px-4 py-2 text-sm text-gray-400 transition hover:border-neon-cyan/60 hover:text-neon-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan"
+            className="min-h-[44px] border border-gembl-ink px-4 py-2 text-sm uppercase tracking-wide text-gembl-muted transition hover:border-gembl-red hover:text-gembl-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
           >
             RESETOVAT KARIÉRU
           </button>
         ) : (
-          <div className="mx-auto max-w-sm rounded-lg border border-neon-pink/40 bg-black/60 p-4">
-            <p className="text-sm text-white">Opravdu chceš resetovat kariéru? Tohle nevratně smaže tvůj postup.</p>
+          <div className="mx-auto max-w-sm border-2 border-gembl-red bg-gembl-paper p-4">
+            <p className="text-sm text-gembl-ink">Opravdu chceš resetovat kariéru? Tohle nevratně smaže tvůj postup.</p>
             <div className="mt-3 flex justify-center gap-3">
               <button
                 type="button"
                 onClick={handleResetConfirm}
-                className="min-h-[40px] rounded-md bg-neon-pink px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+                className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-4 py-2 text-sm font-semibold uppercase tracking-wide text-gembl-paper shadow-hard-sm transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
               >
                 Ano, resetovat
               </button>
               <button
                 type="button"
                 onClick={() => setShowResetConfirm(false)}
-                className="min-h-[40px] rounded-md border border-white/20 px-4 py-2 text-sm text-gray-300 transition hover:border-white/40"
+                className="min-h-[40px] border border-gembl-ink px-4 py-2 text-sm text-gembl-ink transition hover:bg-gembl-paper-dark"
               >
                 Zrušit
               </button>
@@ -247,8 +245,8 @@ export default function SlotMachine() {
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-gray-500">{label}</dt>
-      <dd className="font-serif text-base font-semibold text-white">{value}</dd>
+      <dt className="text-gembl-muted">{label}</dt>
+      <dd className="font-mono text-base font-semibold text-gembl-ink">{value}</dd>
     </div>
   );
 }

@@ -3,8 +3,10 @@ import { ImageResponse } from "next/og";
 export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
 
-// Typografické "G" na tmavém pozadí s neonovým obrysem — stejná vizuální
-// identita jako zbytek webu (viz Header.tsx logo), žádný externí obrázek.
+// Typografické "G" na krémovém papírovém pozadí s tenkým černým
+// orámováním — stejná novinová/plakátová identita jako zbytek webu
+// (viz Header.tsx logo, app/styles/gembl-newspaper.css). Žádný
+// gradient, žádný externí obrázek.
 export default function Icon() {
   return new ImageResponse(
     (
@@ -12,19 +14,18 @@ export default function Icon() {
         style={{
           width: "100%",
           height: "100%",
-          borderRadius: "14px",
-          background: "linear-gradient(180deg, #0a0014 0%, #1a0330 100%)",
+          background: "#f3ede2",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          border: "2px solid #ff2e9a",
+          border: "3px solid #111111",
         }}
       >
         <div
           style={{
             fontSize: 38,
             fontWeight: 800,
-            color: "#ff2e9a",
+            color: "#b32218",
             display: "flex",
           }}
         >

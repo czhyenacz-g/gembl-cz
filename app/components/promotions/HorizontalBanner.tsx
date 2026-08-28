@@ -30,12 +30,12 @@ export default function HorizontalBanner({ promotion, className = "" }: { promot
   }
 
   const content = (
-    <div className="relative aspect-[4/1] w-full overflow-hidden rounded-lg">
+    <div className="relative aspect-[4/1] w-full overflow-hidden">
       <Image src={promotion.imageUrl} alt={promotion.title} fill sizes="100vw" className="object-cover" />
     </div>
   );
 
-  const wrapperClassName = `group block overflow-hidden rounded-lg border border-neon-cyan/20 bg-white/5 p-1.5 transition hover:border-neon-cyan/60 hover:shadow-glow-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan ${className}`;
+  const wrapperClassName = `group block overflow-hidden border border-gembl-ink bg-gembl-paper-dark p-1.5 transition hover:shadow-hard-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink ${className}`;
 
   if (!promotion.href) {
     return (

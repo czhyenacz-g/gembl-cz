@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     (
       <div
         style={{
-          background: "linear-gradient(135deg, #0a0014 0%, #1a0330 60%, #0a0014 100%)",
+          background: "#f3ede2",
           width: "100%",
           height: "100%",
           display: "flex",
@@ -26,11 +26,12 @@ export async function GET(request: NextRequest) {
           style={{
             fontSize: 80,
             fontWeight: 800,
-            color: "#ffffff",
+            color: "#111111",
             textAlign: "center",
             marginBottom: 32,
+            paddingBottom: 24,
+            borderBottom: "6px solid #111111",
             display: "flex",
-            textShadow: "0 0 40px rgba(255, 46, 154, 0.6)",
           }}
         >
           {title}
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
           <div
             style={{
               fontSize: 40,
-              color: "#22e5ff",
+              fontWeight: 700,
+              color: "#b32218",
               textAlign: "center",
               display: "flex",
             }}
@@ -50,7 +52,7 @@ export async function GET(request: NextRequest) {
         <div
           style={{
             fontSize: 32,
-            color: "#ffcc33",
+            color: "#6c665d",
             textAlign: "center",
             marginTop: 48,
             display: "flex",

@@ -20,8 +20,8 @@ export default function AutomatyPage() {
   return (
     <div className="px-4 py-12">
       <div className="mx-auto max-w-xl text-center">
-        <h1 className="font-serif text-3xl font-extrabold text-white sm:text-4xl">Automaty</h1>
-        <p className="mt-3 text-gray-400">Tři válce, klasické symboly, žádná šance na výhru.</p>
+        <h1 className="gembl-masthead inline-block text-3xl font-black sm:text-4xl">Automaty</h1>
+        <p className="mt-3 text-gembl-muted">Tři válce, klasické symboly, žádná šance na výhru.</p>
       </div>
 
       <div className="mx-auto mt-8 max-w-xl px-4">

@@ -24,12 +24,12 @@ export default function AchievementToast({ title, onDismiss }: { title: string; 
   return (
     <div
       role="status"
-      className={`w-64 rounded-lg border border-neon-gold bg-black/90 px-4 py-3 shadow-glow-gold transition duration-300 ${
+      className={`w-64 border-2 border-gembl-ink bg-gembl-paper px-4 py-3 shadow-hard-sm transition duration-300 ${
         visible ? "translate-x-0 opacity-100" : "translate-x-4 opacity-0"
       }`}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-neon-gold">Achievement odemčen</p>
-      <p className="mt-0.5 font-serif text-white">{title}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-gembl-red">Achievement odemčen</p>
+      <p className="mt-0.5 font-serif text-gembl-ink">{title}</p>
     </div>
   );
 }

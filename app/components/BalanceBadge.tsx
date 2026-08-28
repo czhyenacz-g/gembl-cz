@@ -19,7 +19,7 @@ export default function BalanceBadge() {
   if (credits === null) return null;
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-neon-gold/40 bg-neon-gold/10 px-3 py-1 text-sm font-semibold text-neon-gold">
+    <span className="inline-flex items-center gap-1 border-2 border-gembl-ink bg-gembl-paper px-3 py-1 font-mono text-sm font-semibold text-gembl-ink">
       {credits.toLocaleString("cs-CZ")} G
     </span>
   );
