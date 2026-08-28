@@ -84,3 +84,266 @@
   border-color: var(--gembl-red);
   color: var(--gembl-red);
 }
+
+/* ---------------------------------------------------------------------
+ * Poster layout /casino — čtyři přímí potomci v pevném DOM pořadí
+ * (menu, účet, hlavní obsah, zbytek pravého sloupce — viz page.tsx).
+ * Účet je samostatný grid item oddělený od zbytku pravého sloupce
+ * schválně: na mobile má jiné pořadí priority než smolař/výhra/klub
+ * (viz zadání "na mobile: masthead, účet, hlavní obsah, menu, pravý
+ * sidebar"), na desktopu oba sedí ve stejném (třetím) sloupci nad
+ * sebou přes grid-template-areas.
+ */
+.gembl-page-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  border: var(--gembl-border-thick) solid var(--gembl-ink);
+}
+
+/* Mobile pořadí: účet, hlavní obsah, menu, zbytek pravého sloupce. */
+.gembl-page-grid > :nth-child(1) {
+  order: 3; /* menu */
+}
+.gembl-page-grid > :nth-child(2) {
+  order: 1; /* účet */
+}
+.gembl-page-grid > :nth-child(3) {
+  order: 2; /* hlavní obsah */
+}
+.gembl-page-grid > :nth-child(4) {
+  order: 4; /* zbytek pravého sloupce (smolař/výhra/klub) */
+}
+
+.gembl-page-grid > * {
+  border-top: var(--gembl-border-thick) solid var(--gembl-ink);
+}
+.gembl-page-grid > :nth-child(2) {
+  border-top: none; /* účet je vizuálně první (order: 1) */
+}
+
+@media (min-width: 1024px) {
+  .gembl-page-grid {
+    grid-template-columns: 260px minmax(0, 1fr) 320px;
+    grid-template-areas: "menu main account" "menu main rest";
+  }
+
+  .gembl-page-grid > :nth-child(1) {
+    grid-area: menu;
+  }
+  .gembl-page-grid > :nth-child(2) {
+    grid-area: account;
+  }
+  .gembl-page-grid > :nth-child(3) {
+    grid-area: main;
+  }
+  .gembl-page-grid > :nth-child(4) {
+    grid-area: rest;
+  }
+
+  .gembl-page-grid > * {
+    border-top: none;
+    border-left: var(--gembl-border-thick) solid var(--gembl-ink);
+  }
+  .gembl-page-grid > :nth-child(1) {
+    border-left: none; /* menu je nejlevější sloupec */
+  }
+  .gembl-page-grid > :nth-child(4) {
+    border-top: var(--gembl-border-thick) solid var(--gembl-ink); /* pod účtem ve stejném sloupci */
+  }
+}
+
+/* Vnitřní odsazení sloupců — sidebar o něco těsnější než hlavní obsah. */
+.gembl-sidebar {
+  padding: 1.5rem 1.25rem;
+}
+
+.gembl-content-panel {
+  padding: 1.75rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .gembl-content-panel {
+    padding: 2.5rem 2rem;
+  }
+}
+
+/* Panel s titulkovým pruhem — ÚČET / NEJVĚTŠÍ SMOLAŘ / GEMBL KLUB / MENU
+ * apod. `.gembl-block` zůstává obecný ohraničený blok (fair terms
+ * tabulka, promo), tohle je jeho varianta s vlastní uppercase hlavičkou. */
+.gembl-panel {
+  background-color: var(--gembl-paper-dark);
+  border: var(--gembl-border-thin) solid var(--gembl-ink);
+  border-radius: var(--gembl-radius);
+}
+
+.gembl-panel-title {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.8rem;
+  border-bottom: var(--gembl-border-thin) solid var(--gembl-ink);
+  padding: 0.65rem 0.9rem;
+}
+
+.gembl-panel-body {
+  padding: 0.9rem;
+}
+
+/* Velký titulek úrovně stránky ("AUTOMATY") — stejná rodina jako
+ * masthead, bez vlastní spodní linky (tu si přidá volající, pokud ji
+ * chce, viz casino/page.tsx). */
+.gembl-poster-heading {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+}
+
+/* Položka levého menu — hranatá, oddělená tenkou linkou, s místem na
+ * ikonu vlevo. `--active`/`--disabled` modifikátory řeší stav bez
+ * dalších obalových divů. */
+.gembl-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 0.9rem;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.85rem;
+  color: var(--gembl-ink);
+  border-bottom: var(--gembl-border-thin) solid var(--gembl-line);
+}
+
+.gembl-nav-item--active {
+  background-color: var(--gembl-red);
+  color: var(--gembl-paper);
+}
+
+.gembl-nav-item--disabled {
+  color: var(--gembl-muted);
+  cursor: default;
+}
+
+/* Jednoduchý hranatý placeholder na místo ikony — dokud nejsou finální
+ * ikony/ilustrace (viz zadání "nepoužívej emoji"). Použitelný i mimo
+ * nav item (např. bullet ikony v hero sekci). */
+.gembl-icon-glyph {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: var(--gembl-border-thin) solid currentColor;
+  border-radius: var(--gembl-radius);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+/* Reusable placeholder pro chybějící ilustrace/artwork (viz
+ * ArtworkPlaceholder.tsx) — papírový panel s jemným diagonálním rastrem
+ * a orámovaným popiskem uprostřed, ať placeholder vypadá jako záměrná
+ * součást designu, ne jako rozbitý obrázek/wireframe. */
+.gembl-artwork-placeholder {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: var(--gembl-border-thick) solid var(--gembl-ink);
+  background-color: var(--gembl-paper-dark);
+  border-radius: var(--gembl-radius);
+}
+
+.gembl-artwork-placeholder::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(17, 17, 17, 0.07) 0,
+    rgba(17, 17, 17, 0.07) 1px,
+    transparent 1px,
+    transparent 14px
+  );
+  pointer-events: none;
+}
+
+.gembl-artwork-placeholder-label {
+  position: relative;
+  font-family: var(--font-heading);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+  color: var(--gembl-muted);
+  background-color: var(--gembl-paper);
+  border: var(--gembl-border-thin) solid var(--gembl-ink);
+  padding: 0.4em 0.8em;
+  text-align: center;
+}
+
+/* Řádek klíč/hodnota v tabulkovém bloku (fair terms apod.). */
+.gembl-table-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  border-bottom: var(--gembl-border-thin) solid var(--gembl-line);
+  font-size: 0.9rem;
+}
+
+.gembl-table-row:last-child {
+  border-bottom: none;
+}
+
+/* CTA tlačítko — hranaté, tvrdý stín, žádný rounded/gradient. Default
+ * varianta je plná červená (primární akce), `--secondary` krémová s
+ * jemnějším stínem, `--disabled` plochá bez stínu pro zatím-neaktivní
+ * akce (dobití kreditu, historie transakcí apod.). */
+.gembl-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.75rem 1.5rem;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.9rem;
+  color: var(--gembl-paper);
+  background-color: var(--gembl-red);
+  border: var(--gembl-border-thick) solid var(--gembl-ink);
+  border-radius: var(--gembl-radius);
+  box-shadow: var(--gembl-shadow-hard);
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+}
+
+.gembl-cta:hover {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.gembl-cta--secondary {
+  color: var(--gembl-ink);
+  background-color: var(--gembl-paper);
+  box-shadow: var(--gembl-shadow-hard-sm);
+}
+
+.gembl-cta--disabled {
+  color: var(--gembl-muted);
+  background-color: var(--gembl-paper-dark);
+  border-color: var(--gembl-muted);
+  box-shadow: none;
+  cursor: default;
+  pointer-events: none;
+}

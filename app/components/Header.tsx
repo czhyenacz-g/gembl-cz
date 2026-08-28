@@ -11,7 +11,7 @@ import BalanceBadge from "./BalanceBadge";
 export default function Header() {
   return (
     <header className="border-b-[3px] border-gembl-ink bg-gembl-paper">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4">
         <Link href="/casino" className="flex items-baseline gap-0.5" aria-label={SITE_NAME}>
           <span className="font-serif text-2xl font-black uppercase tracking-tight text-gembl-ink">GEMBL</span>
           <span className="font-serif text-sm font-bold uppercase text-gembl-red">.cz</span>
@@ -29,7 +29,14 @@ export default function Header() {
           ))}
         </nav>
 
-        <BalanceBadge />
+        <div className="flex items-center gap-2">
+          {/* Mini profil — žádný účet/auth systém zatím neexistuje, viz
+              zadání "pokud nickname, zobraz ho, pokud ne, SMOLAR77". */}
+          <span className="hidden font-serif text-xs font-bold uppercase tracking-wide text-gembl-muted sm:inline">
+            Smolar77
+          </span>
+          <BalanceBadge />
+        </div>
       </div>
     </header>
   );

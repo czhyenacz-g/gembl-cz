@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ArtworkPlaceholder from "../../components/ArtworkPlaceholder";
 import GlobalStatsLine from "../../components/GlobalStatsLine";
 import PromotionSlot from "../../components/promotions/PromotionSlot";
-import { SITE_DESCRIPTION, SITE_TITLE, SUBTAGLINE, TAGLINE } from "../../config/site";
+import { SITE_DESCRIPTION, SITE_TITLE } from "../../config/site";
+import AccountPanel from "./AccountPanel";
+import LeftSidebar from "./LeftSidebar";
+import RightSidebarPanels from "./RightSidebarPanels";
 
 const PATHNAME = "/casino";
 
@@ -20,51 +24,110 @@ const FAIR_TERMS = [
   { label: "Falešné naděje", value: "Žádné" },
 ] as const;
 
+const HERO_BULLETS = ["Hraj s virtuálními kredity", "Výhra není možná", "Vždycky skoro"] as const;
+
+const HOW_IT_WORKS = [
+  { title: "Dostaneš kredity", subtitle: "za registraci" },
+  { title: "Hraj automaty", subtitle: "a sleduj, jak mizí" },
+  { title: "Vždycky skoro", subtitle: "výhra je vždycky těsně vedle" },
+] as const;
+
 export default function Home() {
   return (
-    <div className="px-4 py-16 sm:py-24">
-      <div className="mx-auto max-w-2xl text-center">
-        <h1 className="gembl-masthead inline-block font-serif text-4xl font-black sm:text-6xl">
-          <span className="text-gembl-ink">GEMBL</span>
-          <span className="text-gembl-red">.cz</span>
-        </h1>
-        <p className="mt-6 font-serif text-xl font-bold text-gembl-ink sm:text-2xl">{TAGLINE}</p>
-        <p className="mt-2 font-semibold uppercase tracking-wide text-gembl-red">{SUBTAGLINE}</p>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:py-12">
+      <div className="gembl-page-grid">
+        <LeftSidebar />
 
-        <p className="mx-auto mt-8 max-w-lg text-gembl-muted">
-          Dostaneš virtuální kredity. Můžeš je prohrát. Vyhrát nemůžeš.
-        </p>
-
-        <Link
-          href="/automaty"
-          className="mt-8 inline-flex min-h-[52px] items-center justify-center border-2 border-gembl-ink bg-gembl-red px-8 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
-        >
-          JDU PROHRÁT
-        </Link>
-
-        <div className="mt-6">
-          <GlobalStatsLine />
+        <div className="gembl-sidebar">
+          <AccountPanel />
         </div>
-      </div>
 
-      <div className="mx-auto mt-12 max-w-2xl">
-        <PromotionSlot placement="homepage_top" pathname={PATHNAME} />
-      </div>
-
-      <div className="mx-auto mt-12 max-w-2xl">
-        <h2 className="gembl-section-heading text-center text-2xl font-bold text-gembl-ink">Naše férové podmínky</h2>
-        <dl className="gembl-block mt-6 divide-y divide-gembl-ink">
-          {FAIR_TERMS.map((term) => (
-            <div key={term.label} className="flex items-center justify-between px-5 py-3 text-sm sm:text-base">
-              <dt className="text-gembl-muted">{term.label}</dt>
-              <dd className="font-mono font-semibold text-gembl-ink">{term.value}</dd>
+        <main className="gembl-content-panel min-w-0">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="gembl-poster-heading text-4xl text-gembl-ink sm:text-5xl">Automaty</h1>
+              <p className="mt-1 font-serif text-2xl italic text-gembl-red sm:text-3xl">Vždycky skoro.</p>
             </div>
-          ))}
-        </dl>
-      </div>
+            <ArtworkPlaceholder
+              label="Cartoon slot"
+              aspectRatio="1 / 1"
+              className="hidden w-24 shrink-0 sm:flex md:w-28"
+            />
+          </div>
 
-      <div className="mx-auto mt-12 max-w-2xl">
-        <PromotionSlot placement="homepage_middle" pathname={PATHNAME} />
+          {/* Hero: hlavní herní blok — vlevo artwork (dokud není finální
+              ilustrace automatu, viz zadání "nedělej kvůli tomuto kroku
+              velký refactor"), vpravo copy + CTA na skutečnou hru. */}
+          <div className="gembl-panel mt-8 grid grid-cols-1 gap-0 md:grid-cols-2">
+            <div className="gembl-panel-body">
+              <ArtworkPlaceholder label="Slot machine artwork" aspectRatio="4 / 3" />
+            </div>
+
+            <div className="gembl-panel-body flex flex-col justify-center border-t border-gembl-ink md:border-l md:border-t-0">
+              <p className="gembl-poster-heading text-2xl text-gembl-ink sm:text-3xl">
+                Zatoč si a uvidíš,
+                <br />
+                <span className="text-gembl-red">co tě čeká.</span>
+              </p>
+
+              <ul className="mt-5 flex flex-col gap-2">
+                {HERO_BULLETS.map((bullet) => (
+                  <li key={bullet} className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gembl-ink">
+                    <span className="gembl-icon-glyph" aria-hidden="true">
+                      •
+                    </span>
+                    {bullet}
+                  </li>
+                ))}
+              </ul>
+
+              <Link href="/automaty" className="gembl-cta mt-6 self-start">
+                Roztočit automat
+              </Link>
+
+              <div className="mt-4">
+                <GlobalStatsLine />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <PromotionSlot placement="homepage_top" pathname={PATHNAME} />
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <section>
+              <h2 className="gembl-section-heading text-xl text-gembl-ink">Naše férové podmínky</h2>
+              <div className="gembl-block mt-4">
+                {FAIR_TERMS.map((term) => (
+                  <div key={term.label} className="gembl-table-row">
+                    <span className="text-gembl-muted">{term.label}</span>
+                    <span className="font-mono font-semibold text-gembl-ink">{term.value}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h2 className="gembl-section-heading text-xl text-gembl-ink">Jak to u nás funguje</h2>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {HOW_IT_WORKS.map((step) => (
+                  <div key={step.title}>
+                    <ArtworkPlaceholder label="Ilustrace" aspectRatio="1 / 1" />
+                    <p className="mt-2 font-serif text-sm font-bold uppercase text-gembl-ink">{step.title}</p>
+                    <p className="text-xs text-gembl-muted">{step.subtitle}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <div className="mt-12">
+            <PromotionSlot placement="homepage_middle" pathname={PATHNAME} />
+          </div>
+        </main>
+
+        <RightSidebarPanels />
       </div>
     </div>
   );
