@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { NAV_LINKS, SITE_NAME } from "../config/site";
 import BalanceBadge from "./BalanceBadge";
+import HeaderIdentity from "./HeaderIdentity";
 
 // Jednoduchý responzivní header — jen 4 nav položky, takže na rozdíl od
 // větších projektů nepotřebuje hamburger/mobilní panel (viz zadání
@@ -30,11 +31,7 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {/* Mini profil — žádný účet/auth systém zatím neexistuje, viz
-              zadání "pokud nickname, zobraz ho, pokud ne, SMOLAR77". */}
-          <span className="hidden font-serif text-xs font-bold uppercase tracking-wide text-gembl-muted sm:inline">
-            Smolar77
-          </span>
+          <HeaderIdentity />
           <BalanceBadge />
         </div>
       </div>

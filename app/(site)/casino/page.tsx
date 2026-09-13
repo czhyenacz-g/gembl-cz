@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import ArtworkPlaceholder from "../../components/ArtworkPlaceholder";
 import GlobalStatsLine from "../../components/GlobalStatsLine";
 import PromotionSlot from "../../components/promotions/PromotionSlot";
 import { SITE_DESCRIPTION, SITE_TITLE } from "../../config/site";
 import AccountPanel from "./AccountPanel";
+import CreditGateOnArrival from "./CreditGateOnArrival";
 import LeftSidebar from "./LeftSidebar";
+import PaymentStatusBanner from "./PaymentStatusBanner";
 import RightSidebarPanels from "./RightSidebarPanels";
 
 const PATHNAME = "/casino";
@@ -43,6 +46,10 @@ export default function Home() {
         </div>
 
         <main className="gembl-content-panel min-w-0">
+          <Suspense fallback={null}>
+            <PaymentStatusBanner />
+          </Suspense>
+
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="gembl-poster-heading text-4xl text-gembl-ink sm:text-5xl">Automaty</h1>
@@ -129,6 +136,8 @@ export default function Home() {
 
         <RightSidebarPanels />
       </div>
+
+      <CreditGateOnArrival />
     </div>
   );
 }

@@ -5,17 +5,18 @@ export const SITE_URL = `https://${SITE_DOMAIN}`;
 export const SITE_TITLE = "GEMBL.cz – jediné kasino, kde předem víš, jak to dopadne";
 
 export const SITE_DESCRIPTION =
-  "Satirické online kasino s virtuálními kredity. Výhra není možná. Ano, vážně. Žádné skutečné peníze, žádná platební brána — jen zábava.";
+  "Satirické online kasino s virtuálními kredity. Výhra není možná. Ano, vážně. Kredity lze dokoupit, ale nemají peněžní hodnotu a nejde je vybrat.";
 
 export const TAGLINE = "Jediné kasino, kde předem víš, jak to dopadne.";
 export const SUBTAGLINE = "Výhra není možná. Ano, vážně.";
 
-// Žádné skutečné peníze/platby/gambling licence — viz CLAUDE.md a
-// /jak-to-funguje. Tenhle disclaimer se zobrazuje na /o-projektu a
-// v patičce, ať je hned jasné, že jde o satiru/hru, ne o skutečné
-// hazardní hraní.
+// Žádný gambling v pravém slova smyslu — výhra zůstává navždy nemožná
+// (RTP 0 %, payout vždy 0, viz lib/casino/slot-engine.ts), i když si G
+// teď lze dokoupit za reálné peníze (viz lib/wallet/). Tenhle disclaimer
+// se zobrazuje na /o-projektu a v patičce, ať je hned jasné, že jde o
+// satiru/hru, ne o skutečné hazardní hraní, a že G nemají peněžní hodnotu.
 export const DISCLAIMER =
-  "GEMBL.cz je satirický zábavní projekt. Nejde o skutečné hazardní hraní, nepoužívají se skutečné peníze a nelze získat žádnou reálnou výhru.";
+  "GEMBL.cz je satirický zábavní projekt. Nejde o skutečné hazardní hraní — výhra není možná a nelze získat žádnou reálnou cenu. G jsou herní kredity, které lze dokoupit za reálné peníze, ale nemají peněžní hodnotu a nelze je vybrat ani směnit za peníze nebo věcné ceny.";
 
 export const NAV_LINKS = [
   { href: "/automaty", label: "Automaty" },

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SPIN_COST, STARTING_CREDITS } from "../../config/site";
 
 const TITLE = "Jak to funguje";
-const DESCRIPTION = "Virtuální kredity, žádné skutečné peníze, výhra vždy 0 G. Jasně a bez malého písma.";
+const DESCRIPTION = "Virtuální kredity, které lze dokoupit, ale ne vybrat. Výhra vždy 0 G. Jasně a bez malého písma.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -23,8 +23,8 @@ export default function JakToFungujePage() {
         <h2 className="gembl-section-heading inline-block text-xl">Virtuální kredity, ne peníze</h2>
         <p className="mt-3">
           Na startu dostaneš {STARTING_CREDITS.toLocaleString("cs-CZ")} G — virtuálních kreditů, které nemají žádnou
-          reálnou hodnotu. Nedají se koupit, nedají se vybrat, nedají se poslat nikomu jinému. Slouží jen k tomu, abys
-          mohl hrát.
+          reálnou hodnotu. Když dojdou, dají se dokoupit v korunách (1 Kč = 1 G) přes Stripe, ale nikdy se nedají
+          vybrat zpátky, směnit za peníze/věcné ceny ani poslat nikomu jinému. Slouží jen k tomu, abys mohl hrát.
         </p>
       </section>
 
@@ -56,9 +56,10 @@ export default function JakToFungujePage() {
       <section className="mt-8">
         <h2 className="gembl-section-heading inline-block text-xl">Tvůj postup</h2>
         <p className="mt-3">
-          Zůstatek a statistiky se ukládají jen v tvém prohlížeči (localStorage) — žádný účet, žádné přihlašování.
-          Po refreshi stránky o nic nepřijdeš. Kdykoliv můžeš kariéru vynulovat tlačítkem „RESETOVAT KARIÉRU&ldquo; na
-          stránce Automaty a začít zase od {STARTING_CREDITS.toLocaleString("cs-CZ")} G.
+          Bez přihlášení se statistiky ukládají jen v tvém prohlížeči (localStorage) — po refreshi stránky o nic
+          nepřijdeš, kdykoliv můžeš kariéru vynulovat tlačítkem „RESETOVAT KARIÉRU&ldquo; na stránce Automaty a začít
+          zase od {STARTING_CREDITS.toLocaleString("cs-CZ")} G. Přihlášení (jen email, žádné heslo) přidáš, když
+          chceš mít zůstatek dostupný napříč zařízeními nebo si chceš dokoupit G.
         </p>
       </section>
     </div>

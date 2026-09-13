@@ -1,20 +1,26 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
+import LoginModal from "../../components/auth/LoginModal";
+import TopUpModal from "../../components/wallet/TopUpModal";
+import { useSession } from "../../../lib/auth/use-session-client";
 import { loadPlayerState, subscribePlayerState } from "../../../lib/casino/storage";
 
-// Nickname zatím nemá žádný zdroj pravdy (žádný účet/auth systém, viz
-// zadání) — stejný dočasný placeholder jako v headeru, dokud nepřibude
-// skutečný profil. Zůstatek je naopak reálný (localStorage přes
-// storage.ts, stejný vzor jako BalanceBadge).
-const PLACEHOLDER_NICKNAME = "Smolar77";
-
+// Zůstatek: pro přihlášené je zdrojem pravdy server (useSession), pro
+// hosty localStorage jako dřív (viz storage.ts) — stejné pravidlo jako
+// BalanceBadge v headeru.
 export default function AccountPanel() {
-  const credits = useSyncExternalStore(
+  const { session } = useSession();
+  const localCredits = useSyncExternalStore(
     subscribePlayerState,
     () => loadPlayerState().credits,
     () => null
   );
+  const [showLogin, setShowLogin] = useState(false);
+  const [showTopUp, setShowTopUp] = useState(false);
+
+  const loggedIn = session.status === "authenticated";
+  const credits = session.status === "authenticated" ? session.credits : localCredits;
 
   return (
     <div className="gembl-panel">
@@ -24,9 +30,11 @@ export default function AccountPanel() {
           className="flex h-16 w-16 items-center justify-center border-2 border-gembl-ink bg-gembl-paper font-serif text-xl font-black text-gembl-ink"
           aria-hidden="true"
         >
-          {PLACEHOLDER_NICKNAME.charAt(0)}
+          {session.status === "authenticated" ? session.email.charAt(0).toUpperCase() : "?"}
         </div>
-        <p className="mt-2 font-serif text-base font-bold uppercase text-gembl-ink">{PLACEHOLDER_NICKNAME}</p>
+        <p className="mt-2 max-w-full truncate font-serif text-base font-bold uppercase text-gembl-ink">
+          {session.status === "authenticated" ? session.email : "Nepřihlášen"}
+        </p>
 
         <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gembl-muted">Zůstatek</p>
         <p className="font-mono text-3xl font-bold text-gembl-red">
@@ -34,16 +42,22 @@ export default function AccountPanel() {
         </p>
 
         <div className="mt-5 flex w-full flex-col gap-2">
-          {/* Skutečné dobíjení kreditů zatím neexistuje (žádné platby,
-              viz zadání) — tlačítka jsou zatím jen UI, bez handleru. */}
-          <button type="button" className="gembl-cta gembl-cta--disabled w-full" disabled>
+          <button type="button" className="gembl-cta w-full" onClick={() => (loggedIn ? setShowTopUp(true) : setShowLogin(true))}>
             Dobít kredit
           </button>
+          {!loggedIn && (
+            <button type="button" className="gembl-cta gembl-cta--secondary w-full" onClick={() => setShowLogin(true)}>
+              Přihlásit se
+            </button>
+          )}
           <button type="button" className="gembl-cta gembl-cta--disabled w-full" disabled>
             Historie transakcí
           </button>
         </div>
       </div>
+
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} callbackUrl="/casino" />}
+      {showTopUp && <TopUpModal onClose={() => setShowTopUp(false)} />}
     </div>
   );
 }

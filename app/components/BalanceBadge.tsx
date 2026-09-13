@@ -1,21 +1,23 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { useSession } from "../../lib/auth/use-session-client";
 import { loadPlayerState, subscribePlayerState } from "../../lib/casino/storage";
 
-// Malý odznak v headeru se zůstatkem — globální (root layout), zatímco
-// hra běží na /automaty, takže si nemůžou předávat stav přes props.
-// useSyncExternalStore nad localStorage pub/sub (viz storage.ts) —
-// odznak se sám přepočítá při KAŽDÉ změně zůstatku, ať k ní dojde
-// kdekoli. `getServerSnapshot` vrací null (server nikdy nezná
+// Malý odznak v headeru se zůstatkem — globální (root layout). Pro
+// přihlášené je zdrojem pravdy server (useSession, viz
+// lib/auth/use-session-client.ts), pro hosty localStorage jako dřív (viz
+// storage.ts). `getServerSnapshot` vrací null (server nikdy nezná
 // localStorage), takže se badge neukáže dřív, než je hydratovaný.
 export default function BalanceBadge() {
-  const credits = useSyncExternalStore(
+  const { session } = useSession();
+  const localCredits = useSyncExternalStore(
     subscribePlayerState,
     () => loadPlayerState().credits,
     () => null
   );
 
+  const credits = session.status === "authenticated" ? session.credits : localCredits;
   if (credits === null) return null;
 
   return (

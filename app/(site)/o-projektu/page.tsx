@@ -39,8 +39,8 @@ export default function OProjektuPage() {
         <h2 className="font-serif text-lg font-bold uppercase tracking-wide text-gembl-red">Důležité upozornění</h2>
         <p className="mt-3 text-sm text-gembl-ink">{DISCLAIMER}</p>
         <p className="mt-2 text-sm text-gembl-muted">
-          Nepoužívají se žádné skutečné peníze, neexistuje platební brána, nákup kreditů ani výběr výhry. Vše, co
-          vidíš, jsou virtuální kredity bez jakékoliv reálné hodnoty.
+          G si lze dokoupit za reálné peníze přes Stripe, ale nikdy nejdou vybrat, převést na jiného hráče ani
+          směnit zpátky za peníze nebo věcné ceny. Výhra se tím nemění — pořád je vždy přesně 0 G.
         </p>
       </section>
     </div>
