@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import LoginModal from "../../components/auth/LoginModal";
 import { notifySessionChanged } from "../../../lib/auth/use-session-client";
 
 // Stripe redirect NENÍ důkaz zaplacení — G se připisují jen přes ověřený
@@ -18,6 +19,7 @@ export default function PaymentStatusBanner() {
   const payment = searchParams.get("payment");
   const login = searchParams.get("login");
   const [attemptsDone, setAttemptsDone] = useState(0);
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     if (payment !== "success") return;
@@ -59,9 +61,15 @@ export default function PaymentStatusBanner() {
 
   if (login === "invalid") {
     return (
-      <div className="gembl-block mb-6 p-4 text-sm text-gembl-ink">
-        <p>Přihlašovací odkaz je neplatný nebo už vypršel. Vyžádej si prosím nový.</p>
-      </div>
+      <>
+        <div className="gembl-block mb-6 p-4 text-sm text-gembl-ink">
+          <p className="font-semibold">Odkaz už není platný.</p>
+          <button type="button" onClick={() => setShowLogin(true)} className="gembl-cta gembl-cta--secondary mt-3">
+            Poslat nový přihlašovací odkaz
+          </button>
+        </div>
+        {showLogin && <LoginModal onClose={() => setShowLogin(false)} callbackUrl="/casino" />}
+      </>
     );
   }
 

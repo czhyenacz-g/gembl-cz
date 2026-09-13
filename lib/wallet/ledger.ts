@@ -22,14 +22,38 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 /**
- * Připíše uvítací bonus přesně jednou za účet — idempotence je vynucená
- * DB podmínkou `welcome_bonus_granted_at IS NULL` přímo v UPDATE, ne jen
- * kontrolou na aplikační úrovni (bezpečné i při souběžných voláních).
+ * Najde nebo založí uživatele podle e-mailu A ve STEJNÉ DB transakci mu
+ * (pokud ještě nemá) atomicky připíše uvítací bonus + ledger záznam — viz
+ * zadání "vytvoření uživatele + připsání G + ledger proveď atomicky".
+ *
+ * Idempotence bonusu stojí na dvou nezávislých vrstvách:
+ * 1) `UPDATE ... WHERE welcome_bonus_granted_at IS NULL` — řádkový zámek
+ *    Postgresu nad `users` sám o sobě serializuje souběžná volání pro
+ *    stejného uživatele (druhé volání uvidí už nastavený sloupec a nic
+ *    nezapíše), takže tohle jde bezpečně volat souběžně (např. dva různé
+ *    magic-linky pro stejný e-mail otevřené skoro najednou).
+ * 2) Partial UNIQUE index `credit_transactions_one_welcome_bonus_per_user`
+ *    (viz db/schema.sql) jako defense-in-depth na úrovni schématu — kdyby
+ *    kdykoli v budoucnu jiný kód obešel (1), INSERT do ledgeru selže na
+ *    unique_violation a transakce se celá vrátí zpět.
  */
-export async function grantWelcomeBonusOnce(userId: number, amountG: number): Promise<{ granted: boolean; balance: number }> {
+export async function findOrCreateUserAndGrantWelcomeBonus(
+  email: string,
+  amountG: number
+): Promise<{ userId: number; granted: boolean; balance: number }> {
   const client = await db.connect();
   try {
     await client.query("BEGIN");
+
+    // `DO UPDATE` (místo `DO NOTHING`) jen proto, aby `RETURNING id`
+    // fungovalo i při konfliktu (existující účet).
+    const userResult = await client.query<{ id: number }>(
+      `INSERT INTO users (email) VALUES ($1)
+       ON CONFLICT (email) DO UPDATE SET updated_at = now()
+       RETURNING id`,
+      [email]
+    );
+    const userId = userResult.rows[0].id;
 
     const updated = await client.query<{ credits: number }>(
       `UPDATE users
@@ -39,23 +63,41 @@ export async function grantWelcomeBonusOnce(userId: number, amountG: number): Pr
       [amountG, userId]
     );
 
-    if (updated.rows.length === 0) {
-      await client.query("ROLLBACK");
+    let granted = false;
+    let balance: number;
+
+    if (updated.rows.length > 0) {
+      balance = updated.rows[0].credits;
+      await client.query(
+        `INSERT INTO credit_transactions (user_id, type, amount_g, balance_after, description)
+         VALUES ($1, 'WELCOME_BONUS', $2, $3, 'Uvítací bonus za založení účtu')`,
+        [userId, amountG, balance]
+      );
+      granted = true;
+    } else {
       const current = await client.query<{ credits: number }>("SELECT credits FROM users WHERE id = $1", [userId]);
-      return { granted: false, balance: current.rows[0]?.credits ?? 0 };
+      balance = current.rows[0]?.credits ?? 0;
     }
 
-    const balance = updated.rows[0].credits;
-    await client.query(
-      `INSERT INTO credit_transactions (user_id, type, amount_g, balance_after, description)
-       VALUES ($1, 'WELCOME_BONUS', $2, $3, 'Uvítací bonus za založení účtu')`,
-      [userId, amountG, balance]
-    );
-
     await client.query("COMMIT");
-    return { granted: true, balance };
+    return { userId, granted, balance };
   } catch (error) {
     await client.query("ROLLBACK");
+    if (isUniqueViolation(error)) {
+      // Partial unique index odchytil souběh, který guard v (1) výše
+      // nestihl (nemělo by k tomu nikdy dojít, ale je to poslední pojistka) —
+      // bonus evidentně právě připsal jiný souběžný request.
+      const fallback = await db.connect();
+      try {
+        const current = await fallback.query<{ id: number; credits: number }>("SELECT id, credits FROM users WHERE email = $1", [
+          email,
+        ]);
+        const row = current.rows[0];
+        return { userId: row?.id ?? 0, granted: false, balance: row?.credits ?? 0 };
+      } finally {
+        fallback.release();
+      }
+    }
     throw error;
   } finally {
     client.release();

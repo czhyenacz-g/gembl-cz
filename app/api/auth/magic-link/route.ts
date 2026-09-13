@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { isRateLimited } from "../../../../lib/analytics/rate-limit";
 import { isValidEmail, normalizeEmail } from "../../../../lib/auth/email";
 import { createMagicLinkToken } from "../../../../lib/auth/magic-link";
+import { isRateLimitedPersistent } from "../../../../lib/auth/rate-limit-db";
 import { sanitizeCallbackUrl } from "../../../../lib/auth/safe-redirect";
 import { sendMagicLinkEmail } from "../../../../lib/auth/send-magic-link-email";
 import { getSiteUrl } from "../../../../lib/site-url";
@@ -10,6 +10,10 @@ import { getSiteUrl } from "../../../../lib/site-url";
 // platný tvar, nebo jestli odeslání e-mailu uvnitř selhalo — viz zadání
 // "neprozrazuj zbytečně, zda email v databázi existuje".
 const GENERIC_MESSAGE = "Pokud je možné tento email použít, poslali jsme na něj přihlašovací odkaz.";
+
+const EMAIL_LIMIT = 5;
+const IP_LIMIT = 20;
+const WINDOW_MINUTES = 15;
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -23,9 +27,23 @@ export async function POST(request: Request) {
   if (typeof rawEmail !== "string") return NextResponse.json({ ok: false }, { status: 400 });
 
   const email = normalizeEmail(rawEmail);
-
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const limited = isRateLimited(`magic-link:ip:${ip}`) || isRateLimited(`magic-link:email:${email}`);
+
+  // Persistentní (Postgres) rate limit — viz lib/auth/rate-limit-db.ts,
+  // nutné na serverless (Vercel), kde in-memory limiter (lib/analytics/
+  // rate-limit.ts) nestačí, protože instance nesdílí paměť. Při výpadku
+  // DB radši fail-open (limit se neuplatní) než rozbít přihlášení úplně —
+  // je to jen ochrana proti zneužití, ne hlavní bezpečnostní hranice.
+  let limited = false;
+  try {
+    const [emailLimited, ipLimited] = await Promise.all([
+      isRateLimitedPersistent("magic_link:email", email, EMAIL_LIMIT, WINDOW_MINUTES),
+      isRateLimitedPersistent("magic_link:ip", ip, IP_LIMIT, WINDOW_MINUTES),
+    ]);
+    limited = emailLimited || ipLimited;
+  } catch (error) {
+    console.error("POST /api/auth/magic-link: rate limit check selhal:", error instanceof Error ? error.message : error);
+  }
 
   if (!limited && isValidEmail(email)) {
     try {

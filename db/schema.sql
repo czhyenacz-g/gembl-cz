@@ -56,3 +56,31 @@ CREATE INDEX IF NOT EXISTS credit_transactions_user_id_idx ON credit_transaction
 CREATE UNIQUE INDEX IF NOT EXISTS credit_transactions_stripe_session_key
   ON credit_transactions (stripe_checkout_session_id)
   WHERE stripe_checkout_session_id IS NOT NULL;
+
+-- Defense-in-depth pro uvítací bonus: `users.welcome_bonus_granted_at`
+-- (viz lib/wallet/ledger.ts findOrCreateUserAndGrantWelcomeBonus) už sám
+-- o sobě dělá bonus bezpečně jednorázový (atomický UPDATE ... WHERE ...
+-- IS NULL, řádkový zámek Postgresu serializuje souběžná volání), ale
+-- tenhle partial UNIQUE index navíc na úrovni DB schématu fyzicky
+-- znemožňuje, aby kdykoli v budoucnu jakýkoli kód vložil druhý
+-- WELCOME_BONUS řádek pro stejného uživatele.
+CREATE UNIQUE INDEX IF NOT EXISTS credit_transactions_one_welcome_bonus_per_user
+  ON credit_transactions (user_id)
+  WHERE type = 'WELCOME_BONUS';
+
+-- Persistentní (DB-backed) rate limiting pro citlivé endpointy, které
+-- nesmí spoléhat na in-memory limiter (viz lib/analytics/rate-limit.ts) —
+-- na serverless (Vercel) běží každý request potenciálně v jiné instanci
+-- bez sdílené paměti. `scope` odlišuje různé limity nad stejnou tabulkou
+-- (např. "magic_link:email" vs "magic_link:ip"), `key` je normalizovaný
+-- email nebo IP. Staré řádky se nikdy nemažou automaticky (viz
+-- lib/auth/rate-limit-db.ts) — objem je u tohohle typu endpointu
+-- zanedbatelný, případné čištění lze přidat později bez migrace.
+CREATE TABLE IF NOT EXISTS rate_limit_hits (
+  id SERIAL PRIMARY KEY,
+  scope TEXT NOT NULL,
+  key TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS rate_limit_hits_scope_key_created_idx ON rate_limit_hits (scope, key, created_at);

@@ -10,15 +10,36 @@ import { fileURLToPath } from "node:url";
 // ověřitelné staticky přes přesný tvar SQL.
 const source = readFileSync(fileURLToPath(new URL("../lib/wallet/ledger.ts", import.meta.url)), "utf8");
 
-describe("grantWelcomeBonusOnce", () => {
-  test("idempotence je vynucená v samotném UPDATE (welcome_bonus_granted_at IS NULL), ne jen na aplikační úrovni", () => {
-    assert.match(source, /WHERE id = \$2 AND welcome_bonus_granted_at IS NULL/);
+describe("findOrCreateUserAndGrantWelcomeBonus", () => {
+  const fn = source.slice(
+    source.indexOf("export async function findOrCreateUserAndGrantWelcomeBonus"),
+    source.indexOf("export async function applyStripeTopup")
+  );
+
+  test("založení/dohledání uživatele (upsert) a udělení bonusu jsou ve STEJNÉ transakci (jedno BEGIN/COMMIT obaluje obojí)", () => {
+    const beginIndex = fn.indexOf('await client.query("BEGIN");');
+    const upsertIndex = fn.indexOf("INSERT INTO users (email)");
+    const bonusUpdateIndex = fn.indexOf("welcome_bonus_granted_at IS NULL");
+    const commitIndex = fn.indexOf('await client.query("COMMIT");');
+    assert.ok(
+      beginIndex !== -1 && beginIndex < upsertIndex && upsertIndex < bonusUpdateIndex && bonusUpdateIndex < commitIndex,
+      "pořadí musí být BEGIN -> upsert uživatele -> podmíněný bonus -> COMMIT, žádný mezikrok mimo transakci"
+    );
   });
 
-  test("při 0 řádcích (bonus už byl daný) se transakce vrátí zpět a NEVLOŽÍ se druhý ledger záznam", () => {
-    const fn = source.slice(source.indexOf("export async function grantWelcomeBonusOnce"), source.indexOf("export async function applyStripeTopup"));
-    assert.match(fn, /if \(updated\.rows\.length === 0\) \{\s*await client\.query\("ROLLBACK"\);/);
-    assert.doesNotMatch(fn.slice(fn.indexOf("if (updated.rows.length === 0)"), fn.indexOf("return { granted: false")), /INSERT INTO credit_transactions/);
+  test("idempotence je vynucená v samotném UPDATE (welcome_bonus_granted_at IS NULL), ne jen na aplikační úrovni", () => {
+    assert.match(fn, /WHERE id = \$2 AND welcome_bonus_granted_at IS NULL/);
+  });
+
+  test("při 0 řádcích (bonus už byl daný) se NEVLOŽÍ druhý ledger záznam, ale upsert uživatele se přesto commitne", () => {
+    const noGrantBranch = fn.slice(fn.indexOf("} else {"), fn.indexOf("await client.query(\"COMMIT\");"));
+    assert.doesNotMatch(noGrantBranch, /INSERT INTO credit_transactions/);
+    assert.match(fn, /granted = true;/);
+  });
+
+  test("defense-in-depth: unique_violation (partial index credit_transactions_one_welcome_bonus_per_user) se odchytí a vrátí granted:false místo pádu", () => {
+    assert.match(fn, /if \(isUniqueViolation\(error\)\) \{/);
+    assert.match(fn, /granted: false, balance: row\?\.credits \?\? 0/);
   });
 });
 
@@ -53,7 +74,7 @@ describe("spendCredits", () => {
 
 describe("obecná atomicita", () => {
   test("každá exportovaná funkce dělá BEGIN/COMMIT s ROLLBACK v catch větvi a client.release() ve finally", () => {
-    const exported = ["grantWelcomeBonusOnce", "applyStripeTopup", "spendCredits"];
+    const exported = ["findOrCreateUserAndGrantWelcomeBonus", "applyStripeTopup", "spendCredits"];
     for (const name of exported) {
       const start = source.indexOf(`export async function ${name}`);
       const nextExportIndex = source.indexOf("export async function", start + 1);

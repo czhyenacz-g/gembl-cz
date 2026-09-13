@@ -14,9 +14,19 @@ describe("POST /api/auth/magic-link", () => {
     assert.doesNotMatch(magicLinkSource, /return NextResponse\.json\(\{ ok: true, message: GENERIC_MESSAGE \}\);[\s\S]*return NextResponse\.json\(\{ ok: false/);
   });
 
-  test("je rate-limitovaný per IP i per email (isRateLimited)", () => {
-    assert.match(magicLinkSource, /isRateLimited\(`magic-link:ip:\$\{ip\}`\)/);
-    assert.match(magicLinkSource, /isRateLimited\(`magic-link:email:\$\{email\}`\)/);
+  test("je persistentně (DB, ne in-memory) rate-limitovaný per email (5/15min) i per IP (20/15min)", () => {
+    assert.match(magicLinkSource, /import \{ isRateLimitedPersistent \} from "\.\.\/\.\.\/\.\.\/\.\.\/lib\/auth\/rate-limit-db"/);
+    assert.match(magicLinkSource, /const EMAIL_LIMIT = 5;/);
+    assert.match(magicLinkSource, /const IP_LIMIT = 20;/);
+    assert.match(magicLinkSource, /const WINDOW_MINUTES = 15;/);
+    assert.match(magicLinkSource, /isRateLimitedPersistent\("magic_link:email", email, EMAIL_LIMIT, WINDOW_MINUTES\)/);
+    assert.match(magicLinkSource, /isRateLimitedPersistent\("magic_link:ip", ip, IP_LIMIT, WINDOW_MINUTES\)/);
+  });
+
+  test("výpadek DB rate-limiteru selže bezpečně na 'not limited' (fail-open), nerozbije přihlášení", () => {
+    const rateLimitBlock = magicLinkSource.slice(magicLinkSource.indexOf("let limited = false;"), magicLinkSource.indexOf("if (!limited"));
+    assert.match(rateLimitBlock, /catch \(error\) \{\s*console\.error\(/);
+    assert.doesNotMatch(rateLimitBlock, /throw/);
   });
 
   test("callbackUrl prochází sanitizeCallbackUrl (obrana proti open-redirectu) předtím, než se použije v odkazu", () => {
@@ -40,9 +50,11 @@ describe("GET /api/auth/verify", () => {
     assert.match(verifySource, /consumeMagicLinkToken\(token\)/);
   });
 
-  test("welcome bonus se uděluje přes grantWelcomeBonusOnce (idempotentní), ne ručním připočtením credits", () => {
-    assert.match(verifySource, /await grantWelcomeBonusOnce\(userId, WELCOME_BONUS_G\);/);
+  test("uživatel se založí/dohledá a welcome bonus se udělí v JEDNÉ atomické operaci (findOrCreateUserAndGrantWelcomeBonus), ne ručním připočtením credits", () => {
+    assert.match(verifySource, /const \{ userId \} = await findOrCreateUserAndGrantWelcomeBonus\(consumed\.email, WELCOME_BONUS_G\);/);
     assert.doesNotMatch(verifySource, /credits\s*\+=|credits:\s*\d+/);
+    // Žádný samostatný INSERT/UPSERT uživatele mimo ledger.ts — atomicita by se jinak rozpadla na dva kroky.
+    assert.doesNotMatch(verifySource, /INSERT INTO users/);
   });
 
   test("welcome bonus je přesně 1000 G", () => {
