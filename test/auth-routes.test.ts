@@ -65,9 +65,19 @@ describe("POST /api/wallet/spin", () => {
     assert.match(spinSource, /if \(!user\) return NextResponse\.json\(\{ error: "unauthorized" \}, \{ status: 401 \}\);/);
   });
 
-  test("cena spinu je server-side konstanta (SPIN_COST), request tělo se nečte", () => {
-    assert.match(spinSource, /spendCredits\(user\.id, SPIN_COST,/);
-    assert.doesNotMatch(spinSource, /request\.json\(\)/);
+  test("auth se ověřuje dřív, než se vůbec čte tělo requestu se sázkou", () => {
+    const authCheckIndex = spinSource.indexOf("if (!user)");
+    const bodyReadIndex = spinSource.indexOf("await request.json()");
+    assert.ok(authCheckIndex !== -1 && bodyReadIndex !== -1 && authCheckIndex < bodyReadIndex);
+  });
+
+  test("sázka se ověřuje přes isValidBet (sdílená validace, viz lib/wallet/bet.ts) dřív, než se cokoli odečte", () => {
+    const validateIndex = spinSource.indexOf("if (!isValidBet(bet))");
+    const spendIndex = spinSource.indexOf("spendCredits(user.id, bet,");
+    assert.match(spinSource, /import \{ isValidBet \} from "\.\.\/\.\.\/\.\.\/\.\.\/lib\/wallet\/bet"/);
+    assert.match(spinSource, /if \(!isValidBet\(bet\)\) return NextResponse\.json\(\{ error: "invalid_bet" \}, \{ status: 400 \}\);/);
+    assert.match(spinSource, /spendCredits\(user\.id, bet,/);
+    assert.ok(validateIndex !== -1 && spendIndex !== -1 && validateIndex < spendIndex, "sázka se musí validovat dřív, než se použije pro odečet");
   });
 
   test("nedostatek kreditů vrací 402, ne pád/500", () => {

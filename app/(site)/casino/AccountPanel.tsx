@@ -33,7 +33,7 @@ export default function AccountPanel() {
           {session.status === "authenticated" ? session.email.charAt(0).toUpperCase() : "?"}
         </div>
         <p className="mt-2 max-w-full truncate font-serif text-base font-bold uppercase text-gembl-ink">
-          {session.status === "authenticated" ? session.email : "Nepřihlášen"}
+          {session.status === "authenticated" ? session.email : "Host"}
         </p>
 
         <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gembl-muted">Zůstatek</p>
@@ -41,13 +41,20 @@ export default function AccountPanel() {
           {credits === null ? "—" : `${credits.toLocaleString("cs-CZ")} G`}
         </p>
 
+        {!loggedIn && (
+          <p className="mt-3 text-xs text-gembl-muted">
+            Dochází G? Přihlas se jen e-mailem a dostaneš <strong className="text-gembl-ink">1 000 G zdarma</strong>.
+          </p>
+        )}
+
         <div className="mt-5 flex w-full flex-col gap-2">
-          <button type="button" className="gembl-cta w-full" onClick={() => (loggedIn ? setShowTopUp(true) : setShowLogin(true))}>
-            Dobít kredit
-          </button>
-          {!loggedIn && (
-            <button type="button" className="gembl-cta gembl-cta--secondary w-full" onClick={() => setShowLogin(true)}>
-              Přihlásit se
+          {loggedIn ? (
+            <button type="button" className="gembl-cta w-full" onClick={() => setShowTopUp(true)}>
+              Dobít kredit
+            </button>
+          ) : (
+            <button type="button" className="gembl-cta w-full" onClick={() => setShowLogin(true)}>
+              Získat 1 000 G
             </button>
           )}
           <button type="button" className="gembl-cta gembl-cta--disabled w-full" disabled>

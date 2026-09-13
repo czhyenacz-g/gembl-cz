@@ -25,5 +25,14 @@ export const NAV_LINKS = [
   { href: "/o-projektu", label: "O projektu" },
 ] as const;
 
-export const STARTING_CREDITS = 1000;
-export const SPIN_COST = 10;
+// Anonymní/nový hráč (bez přihlášení) startuje na 100 G — přihlášením
+// (magic-link, viz lib/auth/) dostane navíc jednorázový bonus 1000 G
+// (WELCOME_BONUS_G v app/api/auth/verify/route.ts), to je záměrně
+// samostatná, vyšší hodnota, ne totéž číslo.
+export const STARTING_CREDITS = 100;
+
+// Nastavitelná sázka na jeden spin (viz app/(site)/automaty/SlotMachine.tsx
+// + lib/wallet/bet.ts) — nahrazuje dřívější pevných 10 G.
+export const MIN_BET = 10;
+export const MAX_BET = 100;
+export const BET_STEP = 10;

@@ -38,6 +38,13 @@ export default function LoginModal({
     <ModalShell title="Přihlas se nebo si vytvoř účet" onClose={onClose}>
       {leadText && <p className="mb-3 text-sm font-semibold text-gembl-red">{leadText}</p>}
 
+      {status !== "sent" && (
+        <div className="mb-4 border-2 border-gembl-red bg-gembl-paper-dark p-3">
+          <p className="font-serif text-sm font-black uppercase text-gembl-red">Dochází G?</p>
+          <p className="mt-1 text-xs text-gembl-ink">Přihlas se pouze e-mailem a připíšeme ti 1 000 G zdarma.</p>
+        </div>
+      )}
+
       {status === "sent" ? (
         <p className="text-sm text-gembl-ink">
           Pokud je možné tento email použít, poslali jsme na něj přihlašovací odkaz. Zkontroluj schránku (i spam).

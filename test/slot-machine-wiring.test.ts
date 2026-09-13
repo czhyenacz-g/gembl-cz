@@ -14,50 +14,93 @@ test("SlotMachine.tsx: je 'use client'", () => {
   assert.match(firstLine, /^["']use client["']/);
 });
 
-test("SlotMachine.tsx: SPIN_COST se importuje ze sdíleného config, není zadrátovaný napevno", () => {
-  assert.match(source, /import \{ SPIN_COST \} from "\.\.\/\.\.\/config\/site"/);
-  assert.doesNotMatch(source, /const SPIN_COST = \d+/);
+test("SlotMachine.tsx: MIN_BET/MAX_BET/BET_STEP se importují ze sdíleného config, nejsou zadrátované napevno", () => {
+  assert.match(source, /import \{ BET_STEP, MAX_BET, MIN_BET \} from "\.\.\/\.\.\/config\/site"/);
+  assert.doesNotMatch(source, /const (MIN_BET|MAX_BET|BET_STEP) = \d+/);
 });
 
-test("SlotMachine.tsx: po spinu se credits VŽDY jen odečítá o SPIN_COST (host) nebo přebírá server-potvrzenou hodnotu (přihlášen), nikdy lokálně nepřičítá výhru", () => {
-  const runSpin = /async function runSpin\(\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
-  // Host: lokální odečet o přesně SPIN_COST.
-  assert.match(runSpin, /applySpinResult\(player, player\.credits - SPIN_COST, result\.payout\)/);
+test("SlotMachine.tsx: sázka je nastavitelná stavem (useState), výchozí hodnota MIN_BET, nikdy pevná konstanta", () => {
+  assert.match(source, /const \[bet, setBet\] = useState\(MIN_BET\);/);
+});
+
+test("SlotMachine.tsx: +/- tlačítka mění sázku o BET_STEP a jsou disabled na hranicích rozsahu", () => {
+  const adjustBetFn = /function adjustBet\(delta: number\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
+  assert.match(adjustBetFn, /if \(next < MIN_BET \|\| next > maxAllowedBet\) return current;/);
+  assert.match(source, /onClick=\{\(\) => adjustBet\(-BET_STEP\)\}/);
+  assert.match(source, /onClick=\{\(\) => adjustBet\(BET_STEP\)\}/);
+  assert.match(source, /disabled=\{spinning \|\| bet <= MIN_BET\}/);
+  assert.match(source, /disabled=\{spinning \|\| bet >= maxAllowedBet\}/);
+});
+
+test("SlotMachine.tsx: maxAllowedBet se počítá přes maxAffordableBet (nikdy vlastní duplicitní zaokrouhlovací logika)", () => {
+  assert.match(source, /import \{ maxAffordableBet \} from "\.\.\/\.\.\/\.\.\/lib\/wallet\/bet"/);
+  assert.match(source, /const maxAllowedBet = effectiveCredits === null \? MAX_BET : maxAffordableBet\(effectiveCredits\);/);
+});
+
+test("SlotMachine.tsx: sázka se po odehrání/přihlášení/dobití automaticky srazí na maxAllowedBet, když na ni přestane stačit zůstatek", () => {
+  const clampEffect = /useEffect\(\(\) => \{\s*setBet\(\(current\) => \{[\s\S]*?\n  \}, \[maxAllowedBet\]\);/.exec(source)?.[0] ?? "";
+  assert.match(clampEffect, /if \(current > maxAllowedBet\) return maxAllowedBet;/);
+});
+
+test("SlotMachine.tsx: po spinu se credits VŽDY jen odečítá o zvolenou sázku (host) nebo přebírá server-potvrzenou hodnotu (přihlášen), nikdy lokálně nepřičítá výhru", () => {
+  const runSpin = /async function runSpin\(wagered: number\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
+  // Host: lokální odečet o přesně zvolenou (uzamčenou v okamžiku kliknutí) sázku.
+  assert.match(runSpin, /applySpinResult\(player, player\.credits - wagered, result\.payout, wagered\)/);
   // Přihlášený: credits = balance vrácený serverem z POST /api/wallet/spin (viz lib/wallet/ledger.ts spendCredits), ne lokální výpočet.
-  assert.match(runSpin, /applySpinResult\(player, data\.balance, result\.payout\)/);
+  assert.match(runSpin, /applySpinResult\(player, data\.balance, result\.payout, wagered\)/);
   assert.doesNotMatch(runSpin, /credits:\s*player\.credits\s*\+/);
   assert.doesNotMatch(runSpin, /credits:\s*data\.balance\s*\+/);
 });
 
-test("SlotMachine.tsx: totalWon se počítá z result.payout (vždy 0), ne z pevné hodnoty", () => {
-  assert.match(source, /function applySpinResult\(player: PlayerState, credits: number, payout: number\)/);
-  assert.match(source, /totalWon: player\.totalWon \+ payout/);
-  // Volající vždy předává result.payout, nikdy vlastní/pevnou hodnotu.
-  const payoutCallSites = source.match(/applySpinResult\([^)]*result\.payout\)/g) ?? [];
-  assert.equal(payoutCallSites.length, 2, "applySpinResult se volá přesně na 2 místech (host/přihlášený), obě s result.payout");
+test("SlotMachine.tsx: sázka se serveru posílá v těle requestu (POST /api/wallet/spin), server si ji sám validuje", () => {
+  assert.match(source, /body: JSON\.stringify\(\{ bet: wagered \}\)/);
 });
 
-test("SlotMachine.tsx: tlačítko má text 'ROZTOČIT ZA {SPIN_COST} G' a je disabled bez dost kreditů/během spinu", () => {
-  assert.match(source, /ROZTOČIT ZA \$\{SPIN_COST\} G/);
-  assert.match(source, /disabled=\{!canSpin\}/);
-  assert.match(source, /const canSpin = !spinning && effectiveCredits !== null && effectiveCredits >= SPIN_COST;/);
-});
-
-test("SlotMachine.tsx: varovný text o nemožnosti výhry je vždy přítomný (ne jen před prvním spinem)", () => {
+test("SlotMachine.tsx: totalWon se počítá z result.payout (vždy 0), totalWagered z předané sázky, ne z pevné hodnoty", () => {
   assert.match(
     source,
-    /V této hře není možné vyhrát\. Spin stojí \{SPIN_COST\} virtuálních kreditů a výhra je vždy 0 G\./
+    /function applySpinResult\(player: PlayerState, credits: number, payout: number, wagered: number\)/
+  );
+  assert.match(source, /totalWon: player\.totalWon \+ payout/);
+  assert.match(source, /totalWagered: player\.totalWagered \+ wagered/);
+  // Volající vždy předává result.payout, nikdy vlastní/pevnou hodnotu.
+  const payoutCallSites = source.match(/applySpinResult\([^)]*result\.payout, wagered\)/g) ?? [];
+  assert.equal(payoutCallSites.length, 2, "applySpinResult se volá přesně na 2 místech (host/přihlášený), obě s result.payout a wagered");
+});
+
+test("SlotMachine.tsx: tlačítko má text 'VSADIT {bet} G' a je disabled bez dost kreditů na zvolenou sázku/během spinu", () => {
+  assert.match(source, /VSADIT \$\{bet\} G/);
+  assert.match(source, /disabled=\{!canSpin\}/);
+  assert.match(
+    source,
+    /const canSpin = !spinning && effectiveCredits !== null && effectiveCredits >= bet && bet >= MIN_BET;/
   );
 });
 
-test("SlotMachine.tsx: reset vyžaduje potvrzovací krok (showResetConfirm), ne rovnou akci", () => {
+test("SlotMachine.tsx: sázka se zamkne v okamžiku kliknutí (handleSpin), ne až uvnitř asynchronního runSpin", () => {
+  const handleSpinFn = /function handleSpin\(\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
+  assert.match(handleSpinFn, /const wagered = bet;/);
+  assert.match(handleSpinFn, /void runSpin\(wagered\);/);
+});
+
+test("SlotMachine.tsx: varovný text o nemožnosti výhry je vždy přítomný a zmiňuje rozsah sázky (ne pevnou cenu)", () => {
+  assert.match(
+    source,
+    /V této hře není možné vyhrát\. Sázka je \{MIN_BET\}–\{MAX_BET\} G \(po \{BET_STEP\}\), výhra je vždy 0 G\./
+  );
+});
+
+test("SlotMachine.tsx: reset vyžaduje potvrzovací krok (showResetConfirm), ne rovnou akci, a vrátí sázku na MIN_BET", () => {
   assert.match(source, /onClick=\{\(\) => setShowResetConfirm\(true\)\}/);
   assert.match(source, /Opravdu chceš resetovat kariéru\?/);
   assert.match(source, /onClick=\{handleResetConfirm\}/);
+  const resetHandler = /function handleResetConfirm\(\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
+  assert.match(resetHandler, /setBet\(MIN_BET\);/);
 });
 
 test("SlotMachine.tsx: nově odemknuté achievementy se pushnou jako toasty po každém spinu", () => {
-  const applySpinResultFn = /function applySpinResult\(player: PlayerState, credits: number, payout: number\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
+  const applySpinResultFn =
+    /function applySpinResult\(player: PlayerState, credits: number, payout: number, wagered: number\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
   assert.match(applySpinResultFn, /checkNewAchievements\(withoutAchievements\)/);
   assert.match(applySpinResultFn, /for \(const achievement of newAchievements\) pushToast\(achievement\.title\)/);
 });
@@ -74,11 +117,13 @@ test("SlotMachine.tsx: čte/ukládá stav přes storage.ts (loadPlayerState/save
   assert.doesNotMatch(source, /localStorage\.(get|set)Item/);
 });
 
-test("SlotMachine.tsx: globální statistiky se reportují v dávkách (po FLUSH_EVERY_N_SPINS), ne po každém jednotlivém spinu", () => {
+test("SlotMachine.tsx: globální statistiky se reportují v dávkách (po FLUSH_EVERY_N_SPINS), ne po každém jednotlivém spinu, s reálnou odehranou sázkou", () => {
   assert.match(source, /const FLUSH_EVERY_N_SPINS = 10;/);
-  const finishSpinAnimationFn = /function finishSpinAnimation\(result: ReturnType<typeof spin>\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
+  const finishSpinAnimationFn = /function finishSpinAnimation\(result: ReturnType<typeof spin>, wagered: number\)[\s\S]*?\n  \}\n/.exec(
+    source
+  )?.[0] ?? "";
   assert.match(finishSpinAnimationFn, /pendingStatsRef\.current\.spins \+= 1;/);
-  assert.match(finishSpinAnimationFn, /pendingStatsRef\.current\.wagered \+= SPIN_COST;/);
+  assert.match(finishSpinAnimationFn, /pendingStatsRef\.current\.wagered \+= wagered;/);
   assert.match(finishSpinAnimationFn, /if \(pendingStatsRef\.current\.spins >= FLUSH_EVERY_N_SPINS\) flushPendingStats\(\);/);
   // Report se NEVOLÁ přímo v finishSpinAnimation mimo flushPendingStats — jinak by šlo o report na každý spin.
   assert.doesNotMatch(finishSpinAnimationFn, /reportGameStatsDeltaClient\(/);

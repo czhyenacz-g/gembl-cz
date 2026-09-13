@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import CreditGateModal from "../../components/wallet/CreditGateModal";
 import { useSession } from "../../../lib/auth/use-session-client";
 import { loadPlayerState, subscribePlayerState } from "../../../lib/casino/storage";
-import { SPIN_COST } from "../../config/site";
+import { MIN_BET } from "../../config/site";
 
 // "Modal se má objevit i když už uživatel přijde na /casino s nulovým
 // kreditem" (viz zadání sekce 9) — na rozdíl od SlotMachine.tsx (kde je
@@ -26,7 +26,7 @@ export default function CreditGateOnArrival() {
   }, [effectiveCredits]);
 
   if (session.status === "loading" || effectiveCredits === null || dismissed) return null;
-  if (effectiveCredits >= SPIN_COST) return null;
+  if (effectiveCredits >= MIN_BET) return null;
 
   return (
     <CreditGateModal loggedIn={session.status === "authenticated"} onClose={() => setDismissed(true)} callbackUrl="/casino" />

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SPIN_COST, STARTING_CREDITS } from "../../config/site";
+import { BET_STEP, MAX_BET, MIN_BET, STARTING_CREDITS } from "../../config/site";
 
 const TITLE = "Jak to funguje";
 const DESCRIPTION = "Virtuální kredity, které lze dokoupit, ale ne vybrat. Výhra vždy 0 G. Jasně a bez malého písma.";
@@ -31,8 +31,9 @@ export default function JakToFungujePage() {
       <section className="mt-8">
         <h2 className="gembl-section-heading inline-block text-xl">Jeden spin, jedna jistota</h2>
         <p className="mt-3">
-          Každé roztočení automatu stojí {SPIN_COST} G. Bez ohledu na to, co padne na válcích — i kdyby to byly tři
-          stejné symboly — výhra je vždy přesně 0 G. Žádná výjimka, žádný skrytý jackpot, žádné malé písmo.
+          Sázku si před každým spinem nastavíš tlačítky −/+ v rozsahu {MIN_BET}–{MAX_BET} G po {BET_STEP} G. Bez
+          ohledu na to, co padne na válcích — i kdyby to byly tři stejné symboly — výhra je vždy přesně 0 G. Žádná
+          výjimka, žádný skrytý jackpot, žádné malé písmo.
         </p>
         <p className="mt-3">RTP (Return to Player) je 0 %. Transparentněji už to fakt nejde.</p>
       </section>
@@ -58,8 +59,8 @@ export default function JakToFungujePage() {
         <p className="mt-3">
           Bez přihlášení se statistiky ukládají jen v tvém prohlížeči (localStorage) — po refreshi stránky o nic
           nepřijdeš, kdykoliv můžeš kariéru vynulovat tlačítkem „RESETOVAT KARIÉRU&ldquo; na stránce Automaty a začít
-          zase od {STARTING_CREDITS.toLocaleString("cs-CZ")} G. Přihlášení (jen email, žádné heslo) přidáš, když
-          chceš mít zůstatek dostupný napříč zařízeními nebo si chceš dokoupit G.
+          zase od {STARTING_CREDITS.toLocaleString("cs-CZ")} G. Přihlášení (jen email, žádné heslo) ti navíc jednou
+          připíše bonus 1 000 G a dá ti zůstatek dostupný napříč zařízeními — a jen přihlášený účet si může G i dokoupit.
         </p>
       </section>
     </div>

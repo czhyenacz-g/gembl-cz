@@ -9,7 +9,8 @@ import { reportGameStatsDeltaClient } from "../../../lib/casino/report-stats-cli
 import { spin } from "../../../lib/casino/slot-engine";
 import { createInitialPlayerState, loadPlayerState, resetPlayerState, savePlayerState } from "../../../lib/casino/storage";
 import type { PlayerState, SlotSymbol } from "../../../lib/casino/types";
-import { SPIN_COST } from "../../config/site";
+import { BET_STEP, MAX_BET, MIN_BET } from "../../config/site";
+import { maxAffordableBet } from "../../../lib/wallet/bet";
 import AchievementToast from "./AchievementToast";
 import Reel from "./Reel";
 
@@ -31,11 +32,15 @@ type ToastItem = { key: number; title: string };
 // serveru (viz useSession) — skutečná sázka i kontrola dostatku kreditů
 // jde přes POST /api/wallet/spin, ne přes lokální odečet, aby šlo nakoupit
 // G přes Stripe a mít to reálně vymahatelné. Nepřihlášení hrají přesně
-// jako dřív, čistě lokálně, bez serveru.
+// jako dřív, čistě lokálně, bez serveru. `bet` (výše sázky, 10–100 G po
+// 10) je čistě UI stav, nepersistuje se mezi reloady — po odehrání se
+// zachovává pro další kolo, jen se sráží (clamp), když na ni přestane
+// stačit zůstatek (viz efekt níž).
 export default function SlotMachine() {
   const { session, refresh: refreshSession } = useSession();
   const [mounted, setMounted] = useState(false);
   const [player, setPlayer] = useState<PlayerState | null>(null);
+  const [bet, setBet] = useState(MIN_BET);
   const [reels, setReels] = useState<[SlotSymbol, SlotSymbol, SlotSymbol] | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [jackpotFlash, setJackpotFlash] = useState(false);
@@ -48,6 +53,7 @@ export default function SlotMachine() {
 
   const loggedIn = session.status === "authenticated";
   const effectiveCredits = session.status === "authenticated" ? session.credits : player?.credits ?? null;
+  const maxAllowedBet = effectiveCredits === null ? MAX_BET : maxAffordableBet(effectiveCredits);
 
   // Stav se čte z localStorage až po mountu (server o něm neví) — stejný
   // vzor jako BalanceBadge/getOrCreateAnonymousId napříč projekty, ať
@@ -57,12 +63,26 @@ export default function SlotMachine() {
     setMounted(true);
   }, []);
 
+  // Sázka nikdy nepřesáhne, co si hráč může dovolit — po odehrání (nebo po
+  // přihlášení/dobití, kdy se effectiveCredits taky mění) se sama srazí na
+  // nejvyšší povolenou hodnotu (viz zadání "20 G zůstane → sázka se sníží
+  // na 20 G"), ale nikdy netlačí nahoru nad MIN_BET, když na sázku vůbec
+  // nezbývá (tlačítko je pak stejně disabled přes canSpin).
+  useEffect(() => {
+    setBet((current) => {
+      if (maxAllowedBet < MIN_BET) return current;
+      if (current > maxAllowedBet) return maxAllowedBet;
+      if (current < MIN_BET) return MIN_BET;
+      return current;
+    });
+  }, [maxAllowedBet]);
+
   // Automaticky nabídne dobití/přihlášení, jakmile hráči na skutečnou hru
-  // nezbývá dost G (viz zadání "modal se má objevit i s nulovým kreditem") —
-  // jednou na stav, ne opakovaně při každém renderu.
+  // nezbývá ani minimální sázka (viz zadání "modal se má objevit i s
+  // nulovým kreditem") — jednou na stav, ne opakovaně při každém renderu.
   useEffect(() => {
     if (effectiveCredits === null) return;
-    if (effectiveCredits < SPIN_COST) setShowCreditGate(true);
+    if (effectiveCredits < MIN_BET) setShowCreditGate(true);
   }, [effectiveCredits]);
 
   // Stabilní identita (useCallback, prázdné deps) — čte/píše jen refy,
@@ -102,12 +122,20 @@ export default function SlotMachine() {
     setToasts((prev) => prev.filter((t) => t.key !== key));
   }
 
-  function applySpinResult(player: PlayerState, credits: number, payout: number): PlayerState {
+  function adjustBet(delta: number) {
+    setBet((current) => {
+      const next = current + delta;
+      if (next < MIN_BET || next > maxAllowedBet) return current;
+      return next;
+    });
+  }
+
+  function applySpinResult(player: PlayerState, credits: number, payout: number, wagered: number): PlayerState {
     const withoutAchievements: PlayerState = {
       ...player,
       credits,
       totalSpins: player.totalSpins + 1,
-      totalWagered: player.totalWagered + SPIN_COST,
+      totalWagered: player.totalWagered + wagered,
       totalWon: player.totalWon + payout,
     };
     const newAchievements: Achievement[] = checkNewAchievements(withoutAchievements);
@@ -119,12 +147,12 @@ export default function SlotMachine() {
     return finalState;
   }
 
-  function finishSpinAnimation(result: ReturnType<typeof spin>) {
+  function finishSpinAnimation(result: ReturnType<typeof spin>, wagered: number) {
     setReels(result.reels);
     setSpinning(false);
 
     pendingStatsRef.current.spins += 1;
-    pendingStatsRef.current.wagered += SPIN_COST;
+    pendingStatsRef.current.wagered += wagered;
     pendingStatsRef.current.won += result.payout;
     if (pendingStatsRef.current.spins >= FLUSH_EVERY_N_SPINS) flushPendingStats();
 
@@ -140,27 +168,32 @@ export default function SlotMachine() {
   }
 
   function handleSpin() {
-    if (!player || spinning || effectiveCredits === null || effectiveCredits < SPIN_COST) {
-      if (effectiveCredits !== null && effectiveCredits < SPIN_COST) setShowCreditGate(true);
+    if (!player || spinning || effectiveCredits === null || effectiveCredits < bet) {
+      if (effectiveCredits !== null && effectiveCredits < MIN_BET) setShowCreditGate(true);
       return;
     }
 
+    const wagered = bet;
     setSpinning(true);
     setResultMessage(null);
     setJackpotFlash(false);
 
     window.setTimeout(() => {
-      void runSpin();
+      void runSpin(wagered);
     }, SPIN_ANIMATION_MS);
   }
 
-  async function runSpin() {
+  async function runSpin(wagered: number) {
     if (!player) return;
     const result = spin();
 
     if (loggedIn) {
       try {
-        const response = await fetch("/api/wallet/spin", { method: "POST" });
+        const response = await fetch("/api/wallet/spin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bet: wagered }),
+        });
         const data = (await response.json()) as { balance?: number; error?: string };
 
         if (!response.ok || typeof data.balance !== "number") {
@@ -170,21 +203,21 @@ export default function SlotMachine() {
           return;
         }
 
-        const finalState = applySpinResult(player, data.balance, result.payout);
+        const finalState = applySpinResult(player, data.balance, result.payout, wagered);
         savePlayerState(finalState);
         setPlayer(finalState);
         notifySessionChanged();
-        finishSpinAnimation(result);
+        finishSpinAnimation(result, wagered);
       } catch {
         setSpinning(false);
       }
       return;
     }
 
-    const finalState = applySpinResult(player, player.credits - SPIN_COST, result.payout);
+    const finalState = applySpinResult(player, player.credits - wagered, result.payout, wagered);
     savePlayerState(finalState);
     setPlayer(finalState);
-    finishSpinAnimation(result);
+    finishSpinAnimation(result, wagered);
   }
 
   function handleResetConfirm() {
@@ -202,6 +235,7 @@ export default function SlotMachine() {
     if (session.status === "authenticated") savePlayerState(fresh);
 
     setPlayer(fresh);
+    setBet(MIN_BET);
     setReels(null);
     setResultMessage(null);
     setJackpotFlash(false);
@@ -216,7 +250,7 @@ export default function SlotMachine() {
     );
   }
 
-  const canSpin = !spinning && effectiveCredits !== null && effectiveCredits >= SPIN_COST;
+  const canSpin = !spinning && effectiveCredits !== null && effectiveCredits >= bet && bet >= MIN_BET;
   const netLoss = player.totalWagered - player.totalWon;
   const displayCredits = effectiveCredits ?? player.credits;
 
@@ -245,17 +279,40 @@ export default function SlotMachine() {
           )}
         </div>
 
-        <div className="mt-6 flex flex-col items-center gap-2">
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gembl-muted">Sázka</span>
+            <button
+              type="button"
+              onClick={() => adjustBet(-BET_STEP)}
+              disabled={spinning || bet <= MIN_BET}
+              aria-label="Snížit sázku"
+              className="flex h-10 w-10 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-xl font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              −
+            </button>
+            <span className="min-w-[5.5rem] text-center font-mono text-xl font-bold text-gembl-ink">{bet} G</span>
+            <button
+              type="button"
+              onClick={() => adjustBet(BET_STEP)}
+              disabled={spinning || bet >= maxAllowedBet}
+              aria-label="Zvýšit sázku"
+              className="flex h-10 w-10 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-xl font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              +
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={handleSpin}
             disabled={!canSpin}
             className="min-h-[52px] w-full max-w-xs border-2 border-gembl-ink bg-gembl-red px-6 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
           >
-            {spinning ? "TOČÍ SE…" : `ROZTOČIT ZA ${SPIN_COST} G`}
+            {spinning ? "TOČÍ SE…" : `VSADIT ${bet} G`}
           </button>
           <p className="text-center text-[11px] text-gembl-muted">
-            Upozornění: V této hře není možné vyhrát. Spin stojí {SPIN_COST} virtuálních kreditů a výhra je vždy 0 G.
+            Upozornění: V této hře není možné vyhrát. Sázka je {MIN_BET}–{MAX_BET} G (po {BET_STEP}), výhra je vždy 0 G.
           </p>
           {!canSpin && !spinning && (
             <button type="button" onClick={() => setShowCreditGate(true)} className="text-center text-sm font-semibold text-gembl-red underline">
