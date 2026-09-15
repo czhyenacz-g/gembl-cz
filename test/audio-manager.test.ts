@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -11,6 +11,7 @@ const {
 } = await import("../lib/audio/preferences.ts");
 const { MUSIC_PLAYLIST } = await import("../lib/audio/tracks.ts");
 const { SFX_REGISTRY } = await import("../lib/audio/sfx.ts");
+const { getActiveIndices, pickRandomTrackIndex } = await import("../lib/audio/playlist.ts");
 
 class FakeStorage {
   private store = new Map<string, string>();
@@ -106,6 +107,64 @@ describe("MUSIC_PLAYLIST", () => {
     const ids = MUSIC_PLAYLIST.map((t) => t.id);
     assert.equal(new Set(ids).size, ids.length);
   });
+
+  test("aktivní (placeholder: false) tracky ukazují na soubory, co reálně existují v public/", () => {
+    const repoRoot = fileURLToPath(new URL("..", import.meta.url));
+    const activeTracks = MUSIC_PLAYLIST.filter((t) => !t.placeholder);
+    assert.ok(activeTracks.length >= 2, "očekávány aspoň 2 reálné produkční tracky");
+    for (const track of activeTracks) {
+      const filePath = path.join(repoRoot, "public", track.src);
+      assert.ok(existsSync(filePath), `${track.src} neexistuje v public/`);
+      const size = statSync(filePath).size;
+      assert.ok(size > 0, `${track.src} je prázdný soubor`);
+      // "nejsou extrémně velké" (viz zadání) — 5 MB je bezpečná horní mez pro pár minut 128 kbps MP3.
+      assert.ok(size < 5 * 1024 * 1024, `${track.src} je podezřele velký (${size} B)`);
+    }
+  });
+
+  test("reálné tracky mají vyplněné author/source/license (i když je licence zatím needs-verification), ne prázdné TODO", () => {
+    for (const track of MUSIC_PLAYLIST.filter((t) => !t.placeholder)) {
+      assert.notEqual(track.author, "TODO");
+      assert.ok(track.source.length > 0);
+      assert.ok(track.license.length > 0);
+    }
+  });
+});
+
+describe("lib/audio/playlist.ts: náhodný výběr playlistu", () => {
+  test("getActiveIndices vrací jen indexy neplaceholder tracků", () => {
+    const active = getActiveIndices();
+    for (const index of active) assert.equal(MUSIC_PLAYLIST[index]?.placeholder, false);
+  });
+
+  test("pickRandomTrackIndex s injektovaným random je deterministický (stejný vzor jako slot-engine.ts spin)", () => {
+    const active = getActiveIndices();
+    assert.equal(pickRandomTrackIndex(null, () => 0), active[0]);
+    assert.equal(pickRandomTrackIndex(null, () => 0.999), active[active.length - 1]);
+  });
+
+  test("s 2+ aktivními tracky NIKDY nevrátí excludeIndex (žádné bezprostřední opakování stejné skladby)", () => {
+    const active = getActiveIndices();
+    if (active.length < 2) return; // test má smysl jen s 2+ aktivními tracky
+    for (const excludeIndex of active) {
+      for (let i = 0; i < 50; i++) {
+        assert.notEqual(pickRandomTrackIndex(excludeIndex, Math.random), excludeIndex);
+      }
+    }
+  });
+
+  test("nad 200 losování pokryje víc než jeden track (reálné náhodné střídání, ne pevný jeden výsledek)", () => {
+    const active = getActiveIndices();
+    if (active.length < 2) return;
+    const seen = new Set<number>();
+    let previous: number | null = null;
+    for (let i = 0; i < 200; i++) {
+      const next = pickRandomTrackIndex(previous);
+      seen.add(next);
+      previous = next;
+    }
+    assert.ok(seen.size > 1);
+  });
 });
 
 describe("SFX_REGISTRY", () => {
@@ -163,6 +222,29 @@ describe("Audio architektura: jediné centrální místo tvoří new Audio()", (
     }
 
     assert.deepEqual(offenders, []);
+  });
+});
+
+describe("AudioProvider.tsx: playlist používá náhodný výběr a fade při přechodu, ne pevné pořadí", () => {
+  const source = readFileSync(fileURLToPath(new URL("../lib/audio/AudioProvider.tsx", import.meta.url)), "utf8");
+
+  test("výběr dalšího tracku jde přes pickRandomTrackIndex z playlist.ts, ne (index + 1) % length", () => {
+    assert.match(source, /import \{ getActiveIndices, pickRandomTrackIndex \} from "\.\/playlist\.ts"/);
+    assert.match(source, /trackIndexRef\.current = pickRandomTrackIndex\(trackIndexRef\.current\)/);
+    assert.doesNotMatch(source, /trackIndexRef\.current \+ 1\) % MUSIC_PLAYLIST\.length/);
+  });
+
+  test("fade-in/fade-out při přechodu mezi tracky (TRACK_FADE_MS v zadaném rozsahu 0.5–1.5 s), žádné WebAudio API", () => {
+    assert.match(source, /const TRACK_FADE_MS = (\d+);/);
+    const ms = Number(/const TRACK_FADE_MS = (\d+);/.exec(source)?.[1]);
+    assert.ok(ms >= 500 && ms <= 1500, `TRACK_FADE_MS (${ms}ms) mimo zadaný rozsah 500-1500ms`);
+    assert.match(source, /fadeVolumeTo\(el, 0,/);
+    assert.match(source, /fadeVolumeTo\(el, preferencesRef\.current\.volumeMusic, TRACK_FADE_MS\)/);
+    assert.doesNotMatch(source, /new (window\.)?(AudioContext|webkitAudioContext)\(|createGain\(/);
+  });
+
+  test("hudební <audio> element má preload=\"none\" (žádné stahování obou tracků při prvním renderu)", () => {
+    assert.match(source, /el\.preload = "none";/);
   });
 });
 

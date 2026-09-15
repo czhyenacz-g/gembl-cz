@@ -2,9 +2,18 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MUSIC_PLAYLIST } from "./tracks.ts";
+import { getActiveIndices, pickRandomTrackIndex } from "./playlist.ts";
 import { SFX_REGISTRY } from "./sfx.ts";
 import { DEFAULT_AUDIO_PREFERENCES, loadAudioPreferences, saveAudioPreferences } from "./preferences.ts";
 import type { AudioPreferences, SfxId } from "./types.ts";
+
+// Krátký fade mezi tracky (viz zadání "0.5–1.5 s") — čisté HTMLAudioElement
+// ramp přes volume (žádné WebAudio API, viz zadání "nepřidávej zbytečně
+// WebAudio, pokud HTMLAudioElement stačí"). Jeden sdílený element = tracky
+// se nepřekrývají (fade-out doznívajícího, pak fade-in nového), ale bez
+// slyšitelného prasknutí, což zadání výslovně povoluje jako fallback.
+const TRACK_FADE_MS = 800;
+const FADE_STEP_MS = 40;
 
 type AudioContextValue = {
   /** false, dokud se preference nenačetly z localStorage (SSR/první frame) — ovládání se do té doby neukazuje. */
@@ -61,9 +70,41 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
   }, [preferences]);
 
   const musicElRef = useRef<HTMLAudioElement | null>(null);
-  const trackIndexRef = useRef(0);
+  // -1 = ještě nebyl vybraný žádný track (viz startCurrentTrack) — pak se
+  // při startu session vylosuje náhodně (viz zadání), ne vždy index 0.
+  const trackIndexRef = useRef(-1);
   const errorStreakRef = useRef(0);
+  const fadeIntervalRef = useRef<number | null>(null);
+  const fadingOutRef = useRef(false);
   const sfxElsRef = useRef<Map<SfxId, HTMLAudioElement>>(new Map());
+
+  const clearFade = useCallback(() => {
+    if (fadeIntervalRef.current !== null) {
+      window.clearInterval(fadeIntervalRef.current);
+      fadeIntervalRef.current = null;
+    }
+  }, []);
+
+  // Lineární ramp hlasitosti právě hrajícího elementu k `target` za
+  // `durationMs` — používá se pro fade-out konce tracku i fade-in nového
+  // (viz handleTrackEnded/handleTimeUpdate níž). Nový fade vždy zruší ten
+  // předchozí (clearFade), ať dva souběžné rampy netahají hlasitost proti sobě.
+  const fadeVolumeTo = useCallback(
+    (el: HTMLAudioElement, target: number, durationMs: number, onDone?: () => void) => {
+      clearFade();
+      const start = el.volume;
+      const startedAt = Date.now();
+      fadeIntervalRef.current = window.setInterval(() => {
+        const progress = Math.min(1, (Date.now() - startedAt) / durationMs);
+        el.volume = start + (target - start) * progress;
+        if (progress >= 1) {
+          clearFade();
+          onDone?.();
+        }
+      }, FADE_STEP_MS);
+    },
+    [clearFade]
+  );
 
   // Preference se čtou z localStorage až po mountu (server o nich neví) —
   // stejný vzor jako lib/casino/storage.ts/loadPlayerState.
@@ -72,33 +113,72 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
+  // Startuje track na `trackIndexRef.current` — poprvé (-1, viz init výš)
+  // nejdřív vylosuje náhodný z aktivních (viz zadání "při startu session
+  // vyber náhodně jeden z aktivních tracků"). Opakované volání (retry po
+  // zablokovaném autoplay, resume po unmute) záměrně NEVYLOSOVÁVÁ znovu —
+  // pokračuje na stejném tracku, ne na náhodně jiném.
   const startCurrentTrack = useCallback(() => {
     const el = musicElRef.current;
+    if (!el) return;
+    if (trackIndexRef.current === -1) trackIndexRef.current = pickRandomTrackIndex(null);
     const track = MUSIC_PLAYLIST[trackIndexRef.current];
-    if (!el || !track) return;
+    if (!track) return;
+    clearFade();
+    fadingOutRef.current = false;
     el.src = track.src;
     el.volume = preferencesRef.current.volumeMusic;
     void el.play().catch(() => {
       // Autoplay zablokovaný prohlížečem (žádná interakce ještě neproběhla)
       // nebo soubor chybí — zkusí se znovu při další interakci/skladbě.
     });
-  }, []);
+  }, [clearFade]);
 
+  // Track doznil přirozeně (fade-out už proběhl přes handleTimeUpdate níž,
+  // viz TRACK_FADE_MS) — vylosuje DALŠÍ náhodný track s vyloučením toho
+  // právě skončivšího (viz zadání "neopakuj bezprostředně stejný track
+  // dvakrát po sobě"), naskočí na tichu a plynule fade-in na cílovou hlasitost.
   const handleTrackEnded = useCallback(() => {
+    const el = musicElRef.current;
     errorStreakRef.current = 0;
-    trackIndexRef.current = (trackIndexRef.current + 1) % MUSIC_PLAYLIST.length;
-    startCurrentTrack();
-  }, [startCurrentTrack]);
+    trackIndexRef.current = pickRandomTrackIndex(trackIndexRef.current);
+    fadingOutRef.current = false;
+    const track = MUSIC_PLAYLIST[trackIndexRef.current];
+    if (!el || !track) return;
+    clearFade();
+    el.src = track.src;
+    el.volume = 0;
+    void el
+      .play()
+      .then(() => fadeVolumeTo(el, preferencesRef.current.volumeMusic, TRACK_FADE_MS))
+      .catch(() => {});
+  }, [clearFade, fadeVolumeTo]);
 
   const handleTrackError = useCallback(() => {
     // Placeholder bez reálného MP3 (viz tracks.ts) nebo poškozený soubor —
-    // zkusí další skladbu, ale nejvýš jednou přes celý playlist, ať to
-    // při samých placeholderech nezacyklí požadavky donekonečna.
+    // zkusí jiný náhodný track, ale nejvýš tolikrát, kolik je aktivních
+    // tracků, ať to při samých rozbitých souborech nezacyklí požadavky donekonečna.
     errorStreakRef.current += 1;
-    if (errorStreakRef.current >= MUSIC_PLAYLIST.length) return;
-    trackIndexRef.current = (trackIndexRef.current + 1) % MUSIC_PLAYLIST.length;
+    if (errorStreakRef.current >= getActiveIndices().length) return;
+    trackIndexRef.current = pickRandomTrackIndex(trackIndexRef.current);
     startCurrentTrack();
   }, [startCurrentTrack]);
+
+  // Cca TRACK_FADE_MS před koncem aktuálního tracku spustí fade-out (viz
+  // zadání "fade out končícího tracku"), jen jednou za track (fadingOutRef).
+  // Samotný přechod na další skladbu pak řeší 'ended' (handleTrackEnded) —
+  // v okamžiku, kdy 'ended' nastane, je hlasitost už na/blízko nule, takže
+  // přechod nepraská.
+  const handleTimeUpdate = useCallback(() => {
+    const el = musicElRef.current;
+    if (!el || fadingOutRef.current) return;
+    if (!Number.isFinite(el.duration) || el.duration <= 0) return;
+    const remainingMs = (el.duration - el.currentTime) * 1000;
+    if (remainingMs <= TRACK_FADE_MS) {
+      fadingOutRef.current = true;
+      fadeVolumeTo(el, 0, Math.max(remainingMs, FADE_STEP_MS));
+    }
+  }, [fadeVolumeTo]);
 
   // Lazy-vytvoří sdílený <audio> element pro hudbu (žádné JSX <audio>,
   // ať nejde o hydration-sensitive DOM uzel) — `preload="none"`, ať se
@@ -109,6 +189,7 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
     el.preload = "none";
     el.addEventListener("ended", handleTrackEnded);
     el.addEventListener("error", handleTrackError);
+    el.addEventListener("timeupdate", handleTimeUpdate);
     musicElRef.current = el;
     // Zachyceno TEĎ (mount), ne přečteno z refu až v cleanup — do té doby
     // playSfx() mohl přidat další položky do stejné Map instance, ale
@@ -120,6 +201,8 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
       el.pause();
       el.removeEventListener("ended", handleTrackEnded);
       el.removeEventListener("error", handleTrackError);
+      el.removeEventListener("timeupdate", handleTimeUpdate);
+      clearFade();
       musicElRef.current = null;
       // SFX elementy taky zastavit — odchod z /casino (provider unmount)
       // nesmí nechat doznívat nic na pozadí (viz zadání "po odchodu z
@@ -127,7 +210,7 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
       for (const sfxEl of sfxEls.values()) sfxEl.pause();
       sfxEls.clear();
     };
-  }, [handleTrackEnded, handleTrackError]);
+  }, [handleTrackEnded, handleTrackError, handleTimeUpdate, clearFade]);
 
   // Hudbu zapíná/vypíná preference.musicEnabled — buď z toggleMuted()
   // (sám je user gesto, přehrání projde), nebo z počátečního načtení

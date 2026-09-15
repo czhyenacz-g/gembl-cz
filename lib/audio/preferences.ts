@@ -6,11 +6,12 @@ import type { AudioPreferences } from "./types.ts";
 const STORAGE_KEY = "gembl:audio-preferences";
 
 // Výchozí hlasitosti jsou záměrně umírněné (viz zadání "nechci hlasité
-// nebo agresivní zvuky") — hudba tišší než efekty, ať nepřekřikuje SFX.
+// nebo agresivní zvuky") — hudba je jen tichá kulisa (0.15–0.25, viz
+// zadání "background music nastav spíš nízko"), SFX smí být výraznější.
 export const DEFAULT_AUDIO_PREFERENCES: AudioPreferences = {
   musicEnabled: true,
   sfxEnabled: true,
-  volumeMusic: 0.35,
+  volumeMusic: 0.2,
   volumeSfx: 0.5,
 };
 

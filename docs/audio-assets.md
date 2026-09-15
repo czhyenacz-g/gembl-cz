@@ -6,9 +6,12 @@ nikdy nedostane audio s nejasnou nebo neověřenou licencí.
 
 Architektura je popsaná v `lib/audio/AudioProvider.tsx` (jediný centrální
 audio manager, `useAudio()` hook). Registry jsou v `lib/audio/tracks.ts`
-(hudba) a `lib/audio/sfx.ts` (efekty) — obě zatím obsahují jen
-**placeholder** záznamy (`placeholder: true`), protože v repu zatím nejsou
-žádné reálné audio soubory.
+(hudba) a `lib/audio/sfx.ts` (efekty). Hudební playlist (`lib/audio/tracks.ts`)
+má od teď 2 REÁLNÉ produkční tracky (`placeholder: false`, viz "Evidence
+tracků" níž) — jejich **licence ale zatím není potvrzená**, viz sloupec
+"Stav licence". SFX registry (`lib/audio/sfx.ts`) zůstává zatím čistě
+**placeholder** (`placeholder: true`), protože v repu nejsou žádné reálné
+SFX soubory.
 
 ## Jak přidat reálný soubor
 
@@ -38,11 +41,43 @@ konkrétní soundtracky nebo melodie z existujících her/značek.
 
 ## Evidence tracků
 
-| Track (id) | Titul | Autor | Zdroj | Licence | Attribution required | Soubor | Stav |
-|---|---|---|---|---|---|---|---|
-| `hot-club-shuffle` | Hot Club Shuffle | TODO | TODO | TODO | TODO | `public/audio/music/hot-club-shuffle.mp3` | placeholder — soubor chybí |
-| `vaudeville-rag` | Vaudeville Rag | TODO | TODO | TODO | TODO | `public/audio/music/vaudeville-rag.mp3` | placeholder — soubor chybí |
-| `cabaret-swing` | Cabaret Swing | TODO | TODO | TODO | TODO | `public/audio/music/cabaret-swing.mp3` | placeholder — soubor chybí |
+Oba soubory nahrál ručně uživatel do `temp/audio/` (mimo git, zdrojové
+originály tam zůstávají jako záloha) a byly převedené pro web (viz
+"Převod" níž). Původní název souboru odpovídá typickému exportu z
+Pixabay (`<autor>-<název>-<pixabay-id>.mp3`), ale **licenční text nebyl
+ověřen** — `author` níž je jen to, co je čitelné z názvu souboru, ne
+potvrzená licenční informace.
+
+| Track (id) | Titul | Autor (z názvu souboru) | Zdroj | Stav licence | Soubor | Duration | Bitrate | Sample rate |
+|---|---|---|---|---|---|---|---|---|
+| `retro-casino-01` | The Foot Tappers Club | Kaazoom | user-provided | ⚠️ **LICENSE NEEDS MANUAL VERIFICATION** | `public/audio/music/retro-casino-01.mp3` | 2:30 (149.9 s) | 128 kbps MP3 | 48 kHz stereo |
+| `retro-casino-02` | Late Night Big Band Swing | NickPanek | user-provided | ⚠️ **LICENSE NEEDS MANUAL VERIFICATION** | `public/audio/music/retro-casino-02.mp3` | 1:33 (92.9 s) | 128 kbps MP3 | 48 kHz stereo |
+
+**Originální (zdrojové) soubory** — zatím ponechané v `temp/audio/` (negitované, mimo `public/`), pro referenci/re-konverzi:
+
+| Originál | Duration | Bitrate | Sample rate | Velikost |
+|---|---|---|---|---|
+| `kaazoom-the-foot-tappers-club-1930s-upbeat-swing-music-482680.mp3` | 2:30 (149.9 s) | 256 kbps MP3 CBR | 48 kHz stereo | 4.58 MB |
+| `nickpanek-late-night-big-band-swing-jazz-instrumental-236168.mp3` | 1:33 (92.9 s) | 256 kbps MP3 CBR | 48 kHz stereo | 2.83 MB |
+
+**Převod pro web** (viz zadání "MP3, stereo, 44.1/48 kHz, ~128–160 kbps,
+loudness normalizace"): `ffmpeg -i <original> -af loudnorm=I=-18:TP=-1.5:LRA=11
+-ar 48000 -ac 2 -c:a libmp3lame -b:a 128k <output>` — jednoprůchodová EBU
+R128 normalizace na -18 LUFS integrated / -1.5 dBTP true peak (bezpečná
+rezerva proti clippingu), 128 kbps (spodní hranice zadaného rozsahu, hudba
+je jen tichá kulisa), sample rate ponechaný na 48 kHz ze zdroje (žádný
+zbytečný resample). Výsledek: `retro-casino-01.mp3` 2.29 MB (mean −20.4 dB,
+peak −6.4 dB, bez clippingu), `retro-casino-02.mp3` 1.42 MB (mean −20.5 dB,
+peak −2.8 dB, bez clippingu) — oba zdroje měly PŘED normalizací výrazně
+odlišnou hlasitost (mean −10.8 dB vs. −17.2 dB), po loudnorm jsou
+vyrovnané, takže přechod mezi nimi v playlistu nepůsobí jako skok hlasitosti.
+
+⚠️ **LICENSE NEEDS MANUAL VERIFICATION** — dokud se u obou tracků ručně
+nedohledá a nepotvrdí přesný licenční text (pravděpodobně Pixabay Content
+License podle formátu názvu souboru, ale nebylo ověřeno), platí `source:
+"user-provided"` / `license: "unknown / verify manually"` v `tracks.ts`.
+Než se to potvrdí, nepoužívat tyto tracky mimo tenhle interní branch bez
+vědomí, že licence je neověřená.
 
 ## Evidence SFX
 
