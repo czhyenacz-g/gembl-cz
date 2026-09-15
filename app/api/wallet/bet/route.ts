@@ -15,6 +15,7 @@ import { InsufficientCreditsError, spendCredits } from "../../../../lib/wallet/l
 // nikdy nepřipisuje, stejně jako u /automaty (viz slot-engine.ts payout: 0).
 const GAME_LABELS: Record<string, string> = {
   skorapky: "Skořápky",
+  losy: "Online losy",
 };
 
 export async function POST(request: Request) {

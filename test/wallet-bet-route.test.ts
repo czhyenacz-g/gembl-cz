@@ -22,6 +22,10 @@ describe("POST /api/wallet/bet", () => {
     assert.match(source, /"skorapky": "Skořápky"|skorapky: "Skořápky"/);
   });
 
+  test("registr obsahuje i /losy (game: 'losy'), sdílí stejný mechanismus jako skořápky", () => {
+    assert.match(source, /"losy": "Online losy"|losy: "Online losy"/);
+  });
+
   test("sázka jde přes isValidBet (stejná validace jako /automaty), ne vlastní paralelní rozsah", () => {
     assert.match(source, /import \{ isValidBet \} from "\.\.\/\.\.\/\.\.\/\.\.\/lib\/wallet\/bet"/);
     assert.match(source, /if \(!isValidBet\(bet\)\) return NextResponse\.json\(\{ error: "invalid_bet" \}, \{ status: 400 \}\);/);

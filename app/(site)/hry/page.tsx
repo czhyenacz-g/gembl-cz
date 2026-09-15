@@ -27,7 +27,13 @@ const GAMES: Array<React.ComponentProps<typeof GameCard>> = [
     href: "/skorapky",
   },
   { emoji: "🎡", title: "Ruleta", description: "Červená, černá, nula. Brzy.", status: "soon" },
-  { emoji: "🎫", title: "Stírací los", description: "Seškrábeš tři symboly. Výsledek stejný jako u automatů.", status: "soon" },
+  {
+    emoji: "🎫",
+    title: "Online losy",
+    description: "Setři tři symboly. Výsledek stejný jako u automatů.",
+    status: "active",
+    href: "/losy",
+  },
   { emoji: "🪙", title: "Krypto guru", description: "Investuj virtuální kredity do virtuálního ničeho.", status: "soon" },
   { emoji: "🏛️", title: "Státní rozpočet", description: "Nejrealističtější hra na GEMBL.cz. Brzy.", status: "soon" },
 ];

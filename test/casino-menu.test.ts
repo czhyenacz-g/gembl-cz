@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { classicSkin } from "../lib/casino-skins/classic.ts";
 
 describe("classicSkin.layout.menu — hlavní casino menu (artwork/stage)", () => {
-  test("obsahuje přesně 5 položek v zadaném pořadí s reálnými route", () => {
+  test("obsahuje přesně 6 položek v zadaném pořadí s reálnými route (Jak funguje jako 6. řádek pod Profil)", () => {
     assert.deepEqual(
       classicSkin.layout.menu.items.map((item) => [item.label, item.href]),
       [
@@ -14,14 +14,14 @@ describe("classicSkin.layout.menu — hlavní casino menu (artwork/stage)", () =
         ["Online losy", "/losy"],
         ["Žebříčky", "/zebricky"],
         ["Profil", "/profil"],
+        ["Jak funguje", "/jak-to-funguje"],
       ]
     );
   });
 
-  test("Ruleta a Jak funguje byly z hlavního menu odstraněny", () => {
+  test("Ruleta byla z hlavního menu odstraněna", () => {
     const labels = classicSkin.layout.menu.items.map((item) => item.label);
     assert.ok(!labels.includes("Ruleta"));
-    assert.ok(!labels.includes("Jak funguje"));
   });
 
   test("žádná položka nemá href: null — všechny jsou hned klikací, žádná 'čeká' na (brzy) větev", () => {
@@ -32,9 +32,9 @@ describe("classicSkin.layout.menu — hlavní casino menu (artwork/stage)", () =
     for (const item of classicSkin.layout.menu.items) assert.ok(!("active" in item));
   });
 
-  test("artwork má 6 připravených řádků, ale položek je jen 5 — přebytečný řádek zůstává nevyužitý, ne filler", () => {
+  test("artwork má 6 připravených řádků a teď i 6 položek — žádný řádek nezůstává prázdný", () => {
     assert.equal(classicSkin.layout.menu.rows.length, 6);
-    assert.equal(classicSkin.layout.menu.items.length, 5);
+    assert.equal(classicSkin.layout.menu.items.length, 6);
   });
 });
 

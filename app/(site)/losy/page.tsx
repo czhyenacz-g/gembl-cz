@@ -1,23 +1,29 @@
 import type { Metadata } from "next";
+import ScratchCard from "./ScratchCard.tsx";
 
 const TITLE = "Online losy";
-const DESCRIPTION = "Stírací losy na GEMBL.cz — zatím v přípravě.";
+const DESCRIPTION = "Stírací los za 10 G. Setři tři symboly. Výhra je vždy 0 G.";
 
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: "/losy" },
-  openGraph: { images: [{ url: `/api/og?title=${encodeURIComponent(TITLE)}`, width: 1200, height: 630 }] },
+  openGraph: {
+    images: [{ url: `/api/og?title=${encodeURIComponent(TITLE)}&sub=${encodeURIComponent("Výhra je vždy 0 G")}`, width: 1200, height: 630 }],
+  },
 };
 
-// Placeholder stránka — route musí existovat, aby menu položka mohla být
-// aktivní a klikací hned (viz zadání "menu položka má být aktivní a
-// klikací, i když route zatím jen placeholder"). Reálná hra přijde později.
 export default function LosyPage() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-16 text-center text-gembl-ink">
-      <h1 className="gembl-masthead inline-block text-3xl font-black sm:text-4xl">Online losy</h1>
-      <p className="mt-4 text-lg text-gembl-muted">Stírací losy se připravují. Zatím zkus Automaty nebo Skořápky.</p>
+    <div className="px-4 py-12">
+      <div className="mx-auto max-w-xl text-center">
+        <h1 className="gembl-masthead inline-block text-3xl font-black sm:text-4xl">Online losy</h1>
+        <p className="mt-3 text-gembl-muted">Setři si své štěstí. Výhra je vždy 0 G.</p>
+      </div>
+
+      <div className="mt-8">
+        <ScratchCard />
+      </div>
     </div>
   );
 }

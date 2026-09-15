@@ -19,20 +19,21 @@ export const classicSkin: CasinoSkin = {
     logoHome: { x: 170, y: 35, width: 350, height: 70 },
 
     menu: {
-      // Artwork má připravených 6 řádků, aktuální menu má jen 5 položek
-      // (Ruleta a Jak funguje jsou pryč, viz zadání) — 6. řádek se prostě
-      // nevykreslí (MenuOverlay.tsx mapuje přes `items`, ne přes `rows`),
-      // beze zbytku/fillеru. Všech 5 položek má reálnou route a je
-      // klikací hned (žádné "(brzy)") — i budoucí /losy, /zebricky,
-      // /profil mají zatím jen placeholder stránku, ale menu na to nesmí
-      // čekat (viz zadání). "Achievementy" v menu není, má vlastní zónu
-      // v pravém sloupci (stats.achievementsLabel).
+      // Artwork má připravených 6 řádků, teď využitých všech 6 (Ruleta je
+      // pryč z hlavního menu, viz zadání — "Jak funguje" se ale vrátila
+      // zpět jako 6. řádek pod Profil, jen odsunutá na konec, ne úplně
+      // pryč). Všech 6 položek má reálnou route a je klikací hned (žádné
+      // "(brzy)") — i /losy, /zebricky, /profil mají zatím jen
+      // placeholder stránku, ale menu na to nesmí čekat (viz zadání).
+      // "Achievementy" v menu není, má vlastní zónu v pravém sloupci
+      // (stats.achievementsLabel).
       items: [
         { label: "Automaty", href: "/automaty" },
         { label: "Skořápky", href: "/skorapky" },
         { label: "Online losy", href: "/losy" },
         { label: "Žebříčky", href: "/zebricky" },
         { label: "Profil", href: "/profil" },
+        { label: "Jak funguje", href: "/jak-to-funguje" },
       ],
       // Šířka 204 (dřív 200) dává trochu víc rezervy pro delší slova
       // ("Žebříčky") — pravý okraj řádků v artworku je až ~x=384. "Online
