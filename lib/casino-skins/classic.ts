@@ -45,9 +45,12 @@ export const classicSkin: CasinoSkin = {
     // z artworku (čtvercový rámeček je 70×72, ne 90×55 na x:1165/y:178
     // jak bylo původně odhadnuto). Y následně posunuto o +5 (vizuální
     // zpětná vazba: +20 byl 4× moc) — name/balance posunuté pod něj se
-    // stejnými rozestupy jako před touto úpravou.
+    // stejnými rozestupy jako před touto úpravou. Výška avatar boxu +10 %
+    // (72→79, vycentrováno na stejný střed), ať HTML overlay celý
+    // překryje vytištěný rámeček — jinak byl nahoře/dole vidět kousek
+    // artworku pod ním.
     account: {
-      avatar: { x: 1142, y: 225, width: 70, height: 72 },
+      avatar: { x: 1142, y: 222, width: 70, height: 79 },
       name: { x: 1075, y: 305, width: 200, height: 24 },
       balance: { x: 1075, y: 335, width: 200, height: 38 },
       primaryCta: { x: 1081, y: 393, width: 188, height: 44 },
