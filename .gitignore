@@ -5,3 +5,8 @@ node_modules/
 *.tsbuildinfo
 .tokens
 .vercel
+
+# Pracovní zdrojové assety (PNG/fotky/audio pro konverzi) — do repa patří
+# jen optimalizované výstupy ve public/, ne zdroje. Cíleně jen temp/, ne
+# globální *.png (v repu mohou být legitimní PNG, např. dynamické ikony).
+/temp/

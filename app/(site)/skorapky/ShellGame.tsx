@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CreditGateModal from "../../components/wallet/CreditGateModal";
@@ -35,6 +36,16 @@ const STATUS_TEXT: Record<Exclude<ShellGamePhase, "result">, string> = {
 };
 
 const CUPS: readonly CupIndex[] = [0, 1, 2];
+
+// Nová herní scéna = jeden artwork (public/skins/skorapky/skorapky.webp).
+// Overlay prvky se pozicují v % vůči tomuhle canvasu, takže drží na obrázku
+// na libovolné šířce bez jakýchkoli JS přepočtů (čisté CSS). Hodnoty jsou
+// měřené z artworku a dají se tady snadno doladit.
+const SCENE_WIDTH = 1672;
+const SCENE_HEIGHT = 941;
+// Středy tří vytištěných elips na stole — vizuální kotvy pro kelímky.
+const SLOT_X: Record<CupIndex, number> = { 0: 33.2, 1: 49.94, 2: 66.99 };
+const SLOT_Y = 70.35;
 
 // Hlavní orchestrátor Skořápek — jeden useState state machine (viz
 // zadání "nepoužívej chaotickou sadu booleanů"), stejný vzor jednoduchého
@@ -238,103 +249,110 @@ export default function ShellGame() {
   const statusText = phase === "result" ? (resultMessage ?? "") : STATUS_TEXT[phase];
 
   return (
-    <div className="gembl-scene flex min-h-screen flex-col overflow-hidden">
-      <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col px-3 py-4 sm:px-6 sm:py-8">
-        {/* Horní lišta scény — jen návrat na titulní stranu kasina a brand;
-            žádné běžné webové menu/patička (viz zadání samostatná hra). */}
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            href="/casino"
-            className="inline-flex min-h-[44px] items-center gap-2 border-2 border-gembl-ink bg-gembl-paper px-3 font-serif text-sm font-bold uppercase tracking-wide text-gembl-ink shadow-hard-sm transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
+    <div className="flex min-h-screen w-full items-center justify-center bg-gembl-paper p-2 sm:p-4">
+      {/* Název je součástí artworku (viz zadání "neduplikuj text z obrázku") —
+          h1 zůstává jen pro SEO/accessibility, vizuálně skrytý. */}
+      <h1 className="sr-only">Skořápky</h1>
+
+      <div
+        className="relative mx-auto w-full max-w-[1600px] select-none"
+        style={{ aspectRatio: `${SCENE_WIDTH} / ${SCENE_HEIGHT}` }}
+      >
+        <Image
+          src="/skins/skorapky/skorapky.webp"
+          alt="Skořápky — hrací stůl se třemi vyznačenými místy pro kelímky"
+          width={SCENE_WIDTH}
+          height={SCENE_HEIGHT}
+          priority
+          className="absolute inset-0 h-full w-full object-contain"
+        />
+
+        {/* Zpět — reálný klikací overlay přesně nad vytištěnou šipkou. */}
+        <Link
+          href="/casino"
+          aria-label="Zpět do kasina"
+          className="absolute z-10 rounded-[var(--gembl-radius)] transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
+          style={{ left: "1.6%", top: "2.3%", width: "8.6%", height: "7.8%" }}
+        />
+
+        {/* Stav / hláška hry */}
+        <p
+          className="absolute z-10 border-2 border-gembl-ink bg-gembl-paper px-3 py-1 text-center font-serif text-xs font-bold text-gembl-ink shadow-hard-sm sm:text-base"
+          style={{ left: "50%", top: "46%", maxWidth: "64%", transform: "translate(-50%, -50%)" }}
+        >
+          {statusText}
+        </p>
+
+        {/* Tři kelímky na vyznačených elipsách stolu */}
+        {CUPS.map((position) => (
+          <div
+            key={position}
+            className="absolute z-10"
+            style={{
+              left: `${SLOT_X[position]}%`,
+              top: `${SLOT_Y}%`,
+              width: "12%",
+              height: "15%",
+              transform: "translate(-50%, -60%)",
+            }}
           >
-            <span aria-hidden="true" className="text-lg leading-none">
-              ←
-            </span>
-            Zpět
-          </Link>
-          <span className="gembl-tag gembl-tag--accent">GEMBL.cz</span>
-        </div>
-
-        {/* Herní scéna — velký rámeček jako hrací stůl/deska, přes kterou se
-            skládají herní prvky (obdoba artwork stage na /casino). */}
-        <div className="mt-4 flex flex-1 items-center">
-          <div className="w-full border-[3px] border-gembl-ink bg-gembl-paper-dark shadow-hard">
-            {/* Název hry + krátká instrukce */}
-            <div className="border-b-[3px] border-gembl-ink bg-gembl-red px-4 py-3 text-center">
-              <h1 className="font-serif text-3xl font-black uppercase tracking-wide text-gembl-paper sm:text-4xl">Skořápky</h1>
-              <p className="mt-1 font-serif text-xs italic text-gembl-paper sm:text-sm">Sleduj kuličku. Vyber kelímek. Prohraj poctivě.</p>
-            </div>
-
-            {/* Hrací plocha se třemi definovanými pozicemi pro kelímky */}
-            <div className="gembl-table-surface m-3 px-3 py-6 sm:m-5 sm:px-6 sm:py-8">
-              <p className="text-center font-serif text-base font-bold text-gembl-ink sm:text-lg">{statusText}</p>
-
-              <div className="mt-8 flex items-end justify-center gap-5 sm:gap-12">
-                {CUPS.map((position) => (
-                  <Cup
-                    key={position}
-                    position={position}
-                    raised={raised}
-                    hasBall={
-                      (phase === "idle" && position === ballPosition) ||
-                      ((phase === "revealing" || phase === "result") && position === revealCup)
-                    }
-                    highlighted={phase === "shuffling" && highlightedCups.includes(position)}
-                    selected={selectedCup === position}
-                    selectable={phase === "choosing" && selectedCup === null}
-                    onSelect={handleSelectCup}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Ovládání + info o sázce/zůstatku */}
-            <div className="border-t-[3px] border-gembl-ink px-4 py-4 sm:px-6 sm:py-5">
-              <div className="flex flex-col items-center gap-3">
-                {phase === "idle" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handlePlay}
-                      disabled={!canPlay}
-                      className="min-h-[52px] w-full max-w-xs border-2 border-gembl-ink bg-gembl-red px-6 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
-                    >
-                      {placingBet ? "ČEKEJ…" : "HRÁT"}
-                    </button>
-                    {effectiveCredits !== null && effectiveCredits < BET && (
-                      <button
-                        type="button"
-                        onClick={() => setShowCreditGate(true)}
-                        className="text-center text-sm font-semibold text-gembl-red underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
-                      >
-                        {loggedIn ? "Nemáš dost kreditů. Dobij G a hraj dál." : "Nemáš dost kreditů. Přihlas se a dobij G."}
-                      </button>
-                    )}
-                  </>
-                )}
-
-                {phase === "result" && (
-                  <button
-                    type="button"
-                    onClick={handlePlayAgain}
-                    className="min-h-[52px] w-full max-w-xs border-2 border-gembl-ink bg-gembl-red px-6 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
-                  >
-                    HRÁT ZNOVU
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm text-gembl-muted">
-                <span className="gembl-tag">
-                  Sázka: <strong className="font-mono font-semibold text-gembl-ink">{BET} G</strong>
-                </span>
-                <span className="gembl-tag">
-                  Zůstatek:{" "}
-                  <strong className="font-mono font-semibold text-gembl-ink">{displayCredits.toLocaleString("cs-CZ")} G</strong>
-                </span>
-              </div>
-            </div>
+            <Cup
+              position={position}
+              raised={raised}
+              hasBall={
+                (phase === "idle" && position === ballPosition) ||
+                ((phase === "revealing" || phase === "result") && position === revealCup)
+              }
+              highlighted={phase === "shuffling" && highlightedCups.includes(position)}
+              selected={selectedCup === position}
+              selectable={phase === "choosing" && selectedCup === null}
+              onSelect={handleSelectCup}
+            />
           </div>
+        ))}
+
+        {/* Ovládání + sázka/zůstatek — jeden řádek dole (na mobilu se tak
+            nepřekryje se zvednutými kelímky; na desktopu je posunutý výš,
+            ať neleží přes spodní titulek artworku). */}
+        <div className="absolute left-1/2 top-[84%] z-10 flex w-[92%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-2 sm:gap-3">
+          <span className="gembl-tag text-[0.65rem] sm:text-sm">
+            Sázka: <strong className="font-mono font-semibold text-gembl-ink">{BET} G</strong>
+          </span>
+
+          {phase === "idle" && (
+            <button
+              type="button"
+              onClick={handlePlay}
+              disabled={!canPlay}
+              className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-[clamp(0.9rem,2vw,1.5rem)] py-2 font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper sm:text-lg"
+            >
+              {placingBet ? "ČEKEJ…" : "HRÁT"}
+            </button>
+          )}
+
+          {phase === "result" && (
+            <button
+              type="button"
+              onClick={handlePlayAgain}
+              className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-[clamp(0.9rem,2vw,1.5rem)] py-2 font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper sm:text-lg"
+            >
+              HRÁT ZNOVU
+            </button>
+          )}
+
+          <span className="gembl-tag text-[0.65rem] sm:text-sm">
+            Zůstatek: <strong className="font-mono font-semibold text-gembl-ink">{displayCredits.toLocaleString("cs-CZ")} G</strong>
+          </span>
+
+          {phase === "idle" && effectiveCredits !== null && effectiveCredits < BET && (
+            <button
+              type="button"
+              onClick={() => setShowCreditGate(true)}
+              className="gembl-tag text-[0.65rem] font-semibold text-gembl-red sm:text-sm"
+            >
+              {loggedIn ? "Nemáš dost kreditů. Dobij G." : "Nemáš dost kreditů. Přihlas se a dobij G."}
+            </button>
+          )}
         </div>
       </div>
 
