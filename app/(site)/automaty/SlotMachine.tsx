@@ -297,7 +297,7 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
             zadání "pokud artwork obsahuje statické symboly, použij je
             jako idle state". */}
         {(spinning || reels) && (
-          <div style={rectStyle(layout.reels)} className="flex items-center justify-center gap-2">
+          <div style={rectStyle(layout.reels)} className="flex items-center justify-center gap-1.5 overflow-hidden">
             <Reel symbol={reels ? reels[0] : null} spinning={spinning} />
             <Reel symbol={reels ? reels[1] : null} spinning={spinning} />
             <Reel symbol={reels ? reels[2] : null} spinning={spinning} />

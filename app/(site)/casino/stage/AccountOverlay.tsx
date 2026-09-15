@@ -44,7 +44,7 @@ export default function AccountOverlay({
       <div
         style={rectStyle(layout.avatar)}
         aria-hidden="true"
-        className="flex items-center justify-center border-2 border-gembl-ink bg-gembl-paper font-serif text-lg font-black text-gembl-ink"
+        className="flex items-center justify-center border-2 border-gembl-ink bg-gembl-paper font-serif text-2xl font-black text-gembl-ink"
       >
         {loggedIn ? displayName.charAt(0).toUpperCase() : "?"}
       </div>

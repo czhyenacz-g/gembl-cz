@@ -20,7 +20,7 @@ export default function StatsOverlay({ layout }: { layout: CasinoSkin["layout"][
         <p className="font-mono text-base font-bold text-gembl-ink">{MOCK_LAST_WIN.amount}</p>
       </div>
 
-      <div style={rectStyle(layout.achievementsLabel)} className="flex flex-col items-center justify-center gap-0.5 px-2 text-center">
+      <div style={rectStyle(layout.achievementsLabel)} className="flex flex-col items-center justify-center gap-0.5 px-2 text-center leading-tight">
         <p className="font-serif text-xs font-bold uppercase tracking-wide text-gembl-ink">Gembl klub</p>
         <p className="text-[10px] text-gembl-muted">Sbírej achievementy</p>
       </div>
@@ -32,7 +32,7 @@ export default function StatsOverlay({ layout }: { layout: CasinoSkin["layout"][
         type="button"
         disabled
         style={rectStyle(layout.achievementsCta)}
-        className="flex cursor-not-allowed items-center justify-center bg-transparent font-serif text-xs font-bold uppercase tracking-wide text-gembl-muted"
+        className="flex cursor-not-allowed items-center justify-center bg-transparent px-2 text-center font-serif text-[11px] font-bold uppercase leading-tight tracking-wide text-gembl-muted"
       >
         Zobrazit achievementy
       </button>

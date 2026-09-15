@@ -29,41 +29,55 @@ export const classicSkin: CasinoSkin = {
         { label: "Žebříčky", href: null },
         { label: "Profil", href: null },
       ],
+      // Šířka 204 (dřív 200) dává trochu víc rezervy pro delší slova
+      // ("Žebříčky") — pravý okraj řádků v artworku je až ~x=384.
       rows: [
-        { x: 178, y: 199, width: 200, height: 42 },
-        { x: 178, y: 241, width: 200, height: 43 },
-        { x: 178, y: 284, width: 200, height: 43 },
-        { x: 178, y: 327, width: 200, height: 43 },
-        { x: 178, y: 370, width: 200, height: 44 },
-        { x: 178, y: 414, width: 200, height: 46 },
+        { x: 178, y: 199, width: 204, height: 42 },
+        { x: 178, y: 241, width: 204, height: 43 },
+        { x: 178, y: 284, width: 204, height: 43 },
+        { x: 178, y: 327, width: 204, height: 43 },
+        { x: 178, y: 370, width: 204, height: 44 },
+        { x: 178, y: 414, width: 204, height: 44 },
       ],
     },
 
+    // Pixel-tuning pass (viz commit): avatar/name/balance přeměřené přímo
+    // z artworku (čtvercový rámeček je 70×72 na x:1142/y:220, ne 90×55 na
+    // x:1165/y:178 jak bylo původně odhadnuto) — name/balance posunuté
+    // pod něj, aby s ním nekolidovaly.
     account: {
-      avatar: { x: 1165, y: 178, width: 90, height: 55 },
-      name: { x: 1075, y: 245, width: 200, height: 26 },
-      balance: { x: 1075, y: 278, width: 200, height: 40 },
+      avatar: { x: 1142, y: 220, width: 70, height: 72 },
+      name: { x: 1075, y: 300, width: 200, height: 24 },
+      balance: { x: 1075, y: 330, width: 200, height: 38 },
       primaryCta: { x: 1081, y: 393, width: 188, height: 44 },
-      secondaryCta: { x: 1067, y: 446, width: 216, height: 42 },
+      secondaryCta: { x: 1069, y: 446, width: 212, height: 42 },
     },
 
     slot: {
       // Reel okno = tři symboly, co artwork už kreslí (cherry/7/bell) —
       // idle stav je background samotný, HTML reely se ukážou až po
       // prvním spinu (viz SlotMachine.tsx `embedded` větev).
-      reels: { x: 555, y: 355, width: 353, height: 115 },
-      // Pravý blank panel pod automatem (rámeček s ikonami ovoce/zvonek/7).
-      resultMessage: { x: 745, y: 760, width: 290, height: 140 },
-      // Levý blank panel pod automatem (rámeček s ikonou žetonu).
-      stakeControl: { x: 415, y: 760, width: 280, height: 60 },
-      spinButton: { x: 415, y: 840, width: 280, height: 80 },
+      reels: { x: 558, y: 358, width: 348, height: 108 },
+      // Pravý blank panel pod automatem (rámeček s ikonami ovoce/zvonek/7) —
+      // přeměřeno, panel má reálný obsahový rámeček x:740-1035, y:760-900.
+      resultMessage: { x: 740, y: 762, width: 295, height: 136 },
+      // Levý blank panel pod automatem (rámeček s ikonou žetonu) — sázka a
+      // spin tlačítko posunuté níž/větší, ať nevisí hned pod nadpisem.
+      stakeControl: { x: 415, y: 772, width: 280, height: 55 },
+      spinButton: { x: 415, y: 850, width: 280, height: 90 },
     },
 
+    // Stat řádky přeměřené přímo z artworku (ikona+hodnota buňka, ne celý
+    // "vizuální blok" — ten je o dost vyšší a přesahoval by do dalšího
+    // řádku, přesně to bylo dřív vidět jako zdvojený/přetékající box).
     stats: {
-      biggestLoser: { x: 1137, y: 558, width: 140, height: 85 },
-      lastWin: { x: 1137, y: 648, width: 140, height: 85 },
-      achievementsLabel: { x: 1137, y: 738, width: 140, height: 85 },
-      achievementsCta: { x: 1090, y: 955, width: 300, height: 46 },
+      biggestLoser: { x: 1137, y: 552, width: 137, height: 56 },
+      lastWin: { x: 1137, y: 633, width: 137, height: 59 },
+      achievementsLabel: { x: 1137, y: 718, width: 137, height: 57 },
+      // Spodní karta s žetony/kartami — vnitřní ozdobný rámeček je jen
+      // 180 px široký (x:1090-1270), ne 300 — dřív přesahoval mimo panel
+      // do dekorativního pozadí vpravo.
+      achievementsCta: { x: 1090, y: 957, width: 180, height: 48 },
     },
   },
 };
