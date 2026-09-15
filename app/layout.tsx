@@ -52,7 +52,13 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="cs" className={`${playfairDisplay.variable} ${inter.variable}`}>
-      <body className="flex min-h-screen flex-col bg-gembl-paper font-sans text-gembl-ink antialiased">
+      {/* `flex min-h-screen flex-col` žije v SiteChrome.tsx (přes
+          (site)/layout.tsx), ne tady natvrdo — desktop /casino stage ho
+          podmíněně vynechává, ať `min-h-screen` neroztáhne stránku na
+          výšku obrazovky i s krátkým obsahem stage (viz zadání "zbytečně
+          vysoký min-height"). `/` (coming-soon page.tsx) je mimo (site)
+          skupinu a řeší si vlastní centrování sám, na tomhle nezávisí. */}
+      <body className="bg-gembl-paper font-sans text-gembl-ink antialiased">
         {children}
         <Analytics />
         {GOATCOUNTER_CODE && (

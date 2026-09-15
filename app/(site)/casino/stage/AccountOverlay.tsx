@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
-import LoginModal from "../../../components/auth/LoginModal";
-import TopUpModal from "../../../components/wallet/TopUpModal";
+import { useSyncExternalStore } from "react";
 import { useSession } from "../../../../lib/auth/use-session-client.ts";
 import { loadPlayerState, subscribePlayerState } from "../../../../lib/casino/storage.ts";
 import type { CasinoSkin } from "../../../../lib/casino-skins/index.ts";
@@ -13,15 +11,29 @@ import { rectStyle } from "../../../../lib/casino-skins/rect-style.ts";
 // nad artwork rámeček místo boxu v gridu). Business logika 1:1 stejná,
 // jen zdvojená prezentační vrstva (JSX), viz zadání "měnit primárně
 // prezentační vrstvu".
-export default function AccountOverlay({ layout }: { layout: CasinoSkin["layout"]["account"] }) {
+//
+// Modal stav si NEDRŽÍ sama (na rozdíl od AccountPanel.tsx) — jen zavolá
+// `onRequestLogin`/`onRequestTopUp`, které vlastní ClassicCasinoStage
+// (jediné místo, které smí ve stage variantě rozhodnout, jaký modal je
+// otevřený — viz zadání "jeden zdroj pravdy", "AccountOverlay nemá
+// implementovat vlastní paralelní modal logiku"). Jinak by mohl vzniknout
+// druhý modal nad/pod tím, co si nezávisle otevře SlotMachine embedded
+// credit gate.
+export default function AccountOverlay({
+  layout,
+  onRequestLogin,
+  onRequestTopUp,
+}: {
+  layout: CasinoSkin["layout"]["account"];
+  onRequestLogin: () => void;
+  onRequestTopUp: () => void;
+}) {
   const { session } = useSession();
   const localCredits = useSyncExternalStore(
     subscribePlayerState,
     () => loadPlayerState().credits,
     () => null
   );
-  const [showLogin, setShowLogin] = useState(false);
-  const [showTopUp, setShowTopUp] = useState(false);
 
   const loggedIn = session.status === "authenticated";
   const credits = session.status === "authenticated" ? session.credits : localCredits;
@@ -55,7 +67,7 @@ export default function AccountOverlay({ layout }: { layout: CasinoSkin["layout"
       <button
         type="button"
         style={rectStyle(layout.primaryCta)}
-        onClick={() => (loggedIn ? setShowTopUp(true) : setShowLogin(true))}
+        onClick={() => (loggedIn ? onRequestTopUp() : onRequestLogin())}
         className="flex items-center justify-center bg-transparent font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
       >
         {loggedIn ? "Dobít kredit" : "Získat 1 000 G"}
@@ -69,9 +81,6 @@ export default function AccountOverlay({ layout }: { layout: CasinoSkin["layout"
       >
         Historie transakcí
       </button>
-
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} callbackUrl="/casino" />}
-      {showTopUp && <TopUpModal onClose={() => setShowTopUp(false)} />}
     </>
   );
 }

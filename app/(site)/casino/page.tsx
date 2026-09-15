@@ -31,7 +31,12 @@ export default function Home() {
           (CasinoViewSwitch), NE čistým CSS `hidden`, protože obě větve
           obsahují komponenty s vedlejšími efekty při mountu (impression
           tracking v PromotionSlot, useSession() fetch) a smí být mountnutá
-          vždy jen jedna z nich zároveň — viz komentář v CasinoViewSwitch.tsx. */}
+          vždy jen jedna z nich zároveň — viz komentář v CasinoViewSwitch.tsx.
+          `CreditGateOnArrival` patří JEN do legacy větve — stage má
+          rovnocennou "credit gate při příchodu" funkci uvnitř SlotMachine
+          embedded (viz creditGate prop v ClassicCasinoStage.tsx); kdyby
+          `CreditGateOnArrival` běžel i pro stage, otevřely by se dva
+          modaly zároveň (viz zadání "dvojí dialog"). */}
       <CasinoViewSwitch
         stage={
           <ClassicCasinoStage
@@ -39,10 +44,13 @@ export default function Home() {
             promotionSlot={<PromotionSlot placement="homepage_top" pathname={PATHNAME} />}
           />
         }
-        legacy={<LegacyCasinoLayout pathname={PATHNAME} />}
+        legacy={
+          <>
+            <LegacyCasinoLayout pathname={PATHNAME} />
+            <CreditGateOnArrival />
+          </>
+        }
       />
-
-      <CreditGateOnArrival />
     </div>
   );
 }

@@ -47,9 +47,15 @@ type SlotMachineProps = {
    * prezentační vrstvu, ne business logiku"). */
   embedded?: boolean;
   layout?: CasinoSkin["layout"]["slot"];
+  /** Sdílený stav "je otevřený credit-gate modal" — na /casino stage ho
+   * ovládá rodič (ClassicCasinoStage), aby SlotMachine a AccountOverlay
+   * nikdy neotevřely dva modaly zároveň (viz zadání "jeden zdroj pravdy").
+   * Na /automaty (embedded=false) se nepředává — komponenta si drží
+   * vlastní lokální stav přesně jako dřív. */
+  creditGate?: { open: boolean; onOpenChange: (open: boolean) => void };
 };
 
-export default function SlotMachine({ embedded, layout }: SlotMachineProps = {}) {
+export default function SlotMachine({ embedded, layout, creditGate }: SlotMachineProps = {}) {
   const { session, refresh: refreshSession } = useSession();
   const [mounted, setMounted] = useState(false);
   const [player, setPlayer] = useState<PlayerState | null>(null);
@@ -60,7 +66,9 @@ export default function SlotMachine({ embedded, layout }: SlotMachineProps = {})
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [showCreditGate, setShowCreditGate] = useState(false);
+  const [localShowCreditGate, setLocalShowCreditGate] = useState(false);
+  const showCreditGate = creditGate ? creditGate.open : localShowCreditGate;
+  const setShowCreditGate = creditGate ? creditGate.onOpenChange : setLocalShowCreditGate;
   const toastKeyRef = useRef(0);
   const pendingStatsRef = useRef({ spins: 0, wagered: 0, won: 0 });
 
@@ -96,7 +104,11 @@ export default function SlotMachine({ embedded, layout }: SlotMachineProps = {})
   useEffect(() => {
     if (effectiveCredits === null) return;
     if (effectiveCredits < MIN_BET) setShowCreditGate(true);
-  }, [effectiveCredits]);
+    // `setShowCreditGate` je buď stabilní useState setter (lokální režim),
+    // nebo `creditGate.onOpenChange` z rodiče (stage režim) — ten NENÍ
+    // garantovaně stabilní napříč rendery, proto je v deps (na rozdíl od
+    // efektu výš pro `maxAllowedBet`, kde je to čistý useState setter).
+  }, [effectiveCredits, setShowCreditGate]);
 
   // Stabilní identita (useCallback, prázdné deps) — čte/píše jen refy,
   // takže je bezpečné ji použít v efektu níž bez re-registrace listenerů.
@@ -345,7 +357,12 @@ export default function SlotMachine({ embedded, layout }: SlotMachineProps = {})
           )}
         </div>
 
-        {showCreditGate && <CreditGateModal loggedIn={loggedIn} onClose={() => setShowCreditGate(false)} callbackUrl="/casino" />}
+        {/* Když je creditGate řízený zvenčí (stage), modal renderuje
+            ClassicCasinoStage — jinak by šlo o druhou paralelní instanci
+            CreditGateModal nad tou sdílenou. */}
+        {!creditGate && showCreditGate && (
+          <CreditGateModal loggedIn={loggedIn} onClose={() => setShowCreditGate(false)} callbackUrl="/casino" />
+        )}
       </>
     );
   }
