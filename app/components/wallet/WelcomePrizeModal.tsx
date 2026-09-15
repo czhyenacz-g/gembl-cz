@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { notifySessionChanged } from "../../../lib/auth/use-session-client.ts";
+import { useAudio } from "../../../lib/audio/AudioProvider.tsx";
 import ModalShell from "../ModalShell";
 
 // Onboarding "vyhrál jsi zdarma" popup (viz zadání) — retro-marketingový
@@ -20,9 +21,18 @@ export default function WelcomePrizeModal({
   onClose: () => void;
   onRequestLogin: () => void;
 }) {
+  const { playSfx } = useAudio();
   const [claiming, setClaiming] = useState(false);
   const [claimedBalance, setClaimedBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Jednou při otevření popupu — parody casino, klidně přehnaně slavnostní
+  // fanfára i pro pouhé (virtuální) kredity zdarma (viz zadání). `playSfx`
+  // má stabilní identitu (useCallback, viz AudioProvider.tsx), takže je
+  // bezpečné v deps bez re-triggerování při každé změně preferencí.
+  useEffect(() => {
+    playSfx("popup_open");
+  }, [playSfx]);
 
   async function handleClaim() {
     if (!loggedIn) {
@@ -38,6 +48,7 @@ export default function WelcomePrizeModal({
       if (!response.ok || typeof data.balance !== "number") throw new Error(data.error ?? "claim_failed");
       notifySessionChanged();
       setClaimedBalance(data.balance);
+      playSfx("credit_added");
     } catch {
       setError("Výhru se nepodařilo vyzvednout, zkus to prosím znovu.");
     } finally {

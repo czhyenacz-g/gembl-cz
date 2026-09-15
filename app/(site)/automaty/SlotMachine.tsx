@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import CreditGateModal from "../../components/wallet/CreditGateModal";
 import { notifySessionChanged, useSession } from "../../../lib/auth/use-session-client";
+import { useAudio } from "../../../lib/audio/AudioProvider.tsx";
 import { checkNewAchievements, type Achievement } from "../../../lib/casino/achievements";
 import { pickRandomMessage } from "../../../lib/casino/messages";
 import { reportGameStatsDeltaClient } from "../../../lib/casino/report-stats-client";
@@ -26,6 +27,18 @@ const GAME_ID = "automaty";
 const FLUSH_EVERY_N_SPINS = 10;
 
 type ToastItem = { key: number; title: string };
+
+// Čistě prezentační výběr SFX pro výsledek (viz zadání "near_miss / lose
+// podle výsledkového typu") — NEMĚNÍ payout ani žádnou herní logiku,
+// jen se dívá na už hotový výsledek spinu. Výhra je v týhle hře vždy 0 G
+// (viz slot-engine.ts), takže i shoda všech tří válců (jackpot flash) je
+// jen vizuálně/zvukově "nejblíž výhře", ne skutečná výhra.
+function classifySpinResult(result: ReturnType<typeof spin>): "near_miss" | "lose" {
+  if (result.isTripleMatch) return "near_miss";
+  const [a, b, c] = result.reels;
+  const hasPartialMatch = a === b || b === c || a === c;
+  return hasPartialMatch ? "near_miss" : "lose";
+}
 
 // Hlavní orchestrátor hry — obyčejný useState, žádný Redux/Context (viz
 // zadání "žádný zbytečně komplikovaný state management"). `player` (stats/
@@ -57,6 +70,7 @@ type SlotMachineProps = {
 
 export default function SlotMachine({ embedded, layout, creditGate }: SlotMachineProps = {}) {
   const { session, refresh: refreshSession } = useSession();
+  const audio = useAudio();
   const [mounted, setMounted] = useState(false);
   const [player, setPlayer] = useState<PlayerState | null>(null);
   const [bet, setBet] = useState(MIN_BET);
@@ -175,6 +189,8 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
   function finishSpinAnimation(result: ReturnType<typeof spin>, wagered: number) {
     setReels(result.reels);
     setSpinning(false);
+    audio.playSfx("spin_stop");
+    audio.playSfx(classifySpinResult(result));
 
     pendingStatsRef.current.spins += 1;
     pendingStatsRef.current.wagered += wagered;
@@ -199,6 +215,7 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
     }
 
     const wagered = bet;
+    audio.playSfx("spin_start");
     setSpinning(true);
     setResultMessage(null);
     setJackpotFlash(false);
