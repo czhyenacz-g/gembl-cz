@@ -13,17 +13,9 @@ export const metadata: Metadata = {
   },
 };
 
+// /losy je samostatná herní obrazovka (viz zadání) — žádné běžné
+// menu/patička (řeší SiteChrome.tsx) a žádný obsahový wrapper tady: celou
+// scénu včetně vlastního min-h-screen si skládá ScratchCard.tsx.
 export default function LosyPage() {
-  return (
-    <div className="px-4 py-12">
-      <div className="mx-auto max-w-xl text-center">
-        <h1 className="gembl-masthead inline-block text-3xl font-black sm:text-4xl">Online losy</h1>
-        <p className="mt-3 text-gembl-muted">Setři si své štěstí. Výhra je vždy 0 G.</p>
-      </div>
-
-      <div className="mt-8">
-        <ScratchCard />
-      </div>
-    </div>
-  );
+  return <ScratchCard />;
 }

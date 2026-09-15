@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CreditGateModal from "../../components/wallet/CreditGateModal";
 import { notifySessionChanged, useSession } from "../../../lib/auth/use-session-client";
@@ -385,114 +386,148 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
   }
 
   return (
-    <div className="mx-auto max-w-xl px-4">
-      <div className="fixed right-4 top-20 z-50 flex flex-col gap-2 sm:top-24">
-        {toasts.map((t) => (
-          <AchievementToast key={t.key} title={t.title} onDismiss={() => dismissToast(t.key)} />
-        ))}
-      </div>
-
-      <div className="gembl-block p-6 shadow-hard sm:p-8">
-        <div className="flex items-center justify-center gap-3 sm:gap-4">
-          <Reel symbol={reels ? reels[0] : null} spinning={spinning} />
-          <Reel symbol={reels ? reels[1] : null} spinning={spinning} />
-          <Reel symbol={reels ? reels[2] : null} spinning={spinning} />
+    <div className="gembl-scene flex min-h-screen flex-col overflow-hidden">
+      <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col px-3 py-4 sm:px-6 sm:py-8">
+        <div className="fixed right-4 top-20 z-50 flex flex-col gap-2 sm:top-24">
+          {toasts.map((t) => (
+            <AchievementToast key={t.key} title={t.title} onDismiss={() => dismissToast(t.key)} />
+          ))}
         </div>
 
-        <div className="mt-6 min-h-[3.5rem] text-center">
-          {jackpotFlash && <p className="animate-pulse font-serif text-3xl font-black uppercase text-gembl-red">JACKPOT!</p>}
-          {!jackpotFlash && resultMessage && (
-            <div>
-              <p className="font-serif text-xl font-bold text-gembl-ink">Výhra: 0 G</p>
-              <p className="mt-1 text-sm text-gembl-muted">{resultMessage}</p>
+        {/* Horní lišta scény — jen návrat na titulní stranu kasina a brand;
+            žádné běžné webové menu/patička (viz zadání samostatná hra). */}
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href="/casino"
+            className="inline-flex min-h-[44px] items-center gap-2 border-2 border-gembl-ink bg-gembl-paper px-3 font-serif text-sm font-bold uppercase tracking-wide text-gembl-ink shadow-hard-sm transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
+          >
+            <span aria-hidden="true" className="text-lg leading-none">
+              ←
+            </span>
+            Zpět
+          </Link>
+          <span className="gembl-tag gembl-tag--accent">GEMBL.cz</span>
+        </div>
+
+        {/* Herní scéna — rámeček jako hrací stůl/deska (obdoba artwork stage
+            na /casino), doplněný statistikami a resetem pod ním. */}
+        <div className="mt-4 flex flex-1 flex-col justify-center gap-6">
+          <div className="w-full border-[3px] border-gembl-ink bg-gembl-paper-dark shadow-hard">
+            {/* Název hry + krátká instrukce */}
+            <div className="border-b-[3px] border-gembl-ink bg-gembl-red px-4 py-3 text-center">
+              <h1 className="font-serif text-3xl font-black uppercase tracking-wide text-gembl-paper sm:text-4xl">Automaty</h1>
+              <p className="mt-1 font-serif text-xs italic text-gembl-paper sm:text-sm">Tři válce, klasické symboly, žádná šance na výhru.</p>
             </div>
-          )}
-        </div>
 
-        <div className="mt-6 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gembl-muted">Sázka</span>
-            <button
-              type="button"
-              onClick={() => adjustBet(-BET_STEP)}
-              disabled={spinning || bet <= MIN_BET}
-              aria-label="Snížit sázku"
-              className="flex h-10 w-10 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-xl font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              −
-            </button>
-            <span className="min-w-[5.5rem] text-center font-mono text-xl font-bold text-gembl-ink">{bet} G</span>
-            <button
-              type="button"
-              onClick={() => adjustBet(BET_STEP)}
-              disabled={spinning || bet >= maxAllowedBet}
-              aria-label="Zvýšit sázku"
-              className="flex h-10 w-10 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-xl font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              +
-            </button>
-          </div>
+            {/* Hrací plocha = válce na stole */}
+            <div className="gembl-table-surface m-3 px-3 py-6 sm:m-5 sm:px-6 sm:py-8">
+              <div className="flex items-center justify-center gap-3 sm:gap-4">
+                <Reel symbol={reels ? reels[0] : null} spinning={spinning} />
+                <Reel symbol={reels ? reels[1] : null} spinning={spinning} />
+                <Reel symbol={reels ? reels[2] : null} spinning={spinning} />
+              </div>
 
-          <button
-            type="button"
-            onClick={handleSpin}
-            disabled={!canSpin}
-            className="min-h-[52px] w-full max-w-xs border-2 border-gembl-ink bg-gembl-red px-6 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
-          >
-            {spinning ? "TOČÍ SE…" : `VSADIT ${bet} G`}
-          </button>
-          <p className="text-center text-[11px] text-gembl-muted">
-            Upozornění: V této hře není možné vyhrát. Sázka je {MIN_BET}–{MAX_BET} G (po {BET_STEP}), výhra je vždy 0 G.
-          </p>
-          {!canSpin && !spinning && (
-            <button type="button" onClick={() => setShowCreditGate(true)} className="text-center text-sm font-semibold text-gembl-red underline">
-              {loggedIn ? "Nemáš dost kreditů. Dobij G a hraj dál." : "Nemáš dost kreditů. Přihlas se a dobij G."}
-            </button>
-          )}
-        </div>
-      </div>
+              <div className="mt-6 min-h-[3.5rem] text-center">
+                {jackpotFlash && <p className="animate-pulse font-serif text-3xl font-black uppercase text-gembl-red">JACKPOT!</p>}
+                {!jackpotFlash && resultMessage && (
+                  <div>
+                    <p className="font-serif text-xl font-bold text-gembl-ink">Výhra: 0 G</p>
+                    <p className="mt-1 text-sm text-gembl-muted">{resultMessage}</p>
+                  </div>
+                )}
+              </div>
+            </div>
 
-      <div className="gembl-block mt-8 p-5">
-        <h2 className="gembl-section-heading text-lg">Statistiky</h2>
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
-          <StatItem label="Zůstatek" value={`${displayCredits.toLocaleString("cs-CZ")} G`} />
-          <StatItem label="Spinů" value={player.totalSpins.toLocaleString("cs-CZ")} />
-          <StatItem label="Protočeno" value={`${player.totalWagered.toLocaleString("cs-CZ")} G`} />
-          <StatItem label="Vyhráno" value={`${player.totalWon.toLocaleString("cs-CZ")} G`} />
-          <StatItem label="Čistá ztráta" value={`${netLoss.toLocaleString("cs-CZ")} G`} />
-        </dl>
-      </div>
+            {/* Ovládání sázky + spin */}
+            <div className="border-t-[3px] border-gembl-ink px-4 py-4 sm:px-6 sm:py-5">
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gembl-muted">Sázka</span>
+                  <button
+                    type="button"
+                    onClick={() => adjustBet(-BET_STEP)}
+                    disabled={spinning || bet <= MIN_BET}
+                    aria-label="Snížit sázku"
+                    className="flex h-10 w-10 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-xl font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[5.5rem] text-center font-mono text-xl font-bold text-gembl-ink">{bet} G</span>
+                  <button
+                    type="button"
+                    onClick={() => adjustBet(BET_STEP)}
+                    disabled={spinning || bet >= maxAllowedBet}
+                    aria-label="Zvýšit sázku"
+                    className="flex h-10 w-10 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-xl font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    +
+                  </button>
+                </div>
 
-      <div className="mt-6 text-center">
-        {!showResetConfirm ? (
-          <button
-            type="button"
-            onClick={() => setShowResetConfirm(true)}
-            className="min-h-[44px] border border-gembl-ink px-4 py-2 text-sm uppercase tracking-wide text-gembl-muted transition hover:border-gembl-red hover:text-gembl-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
-          >
-            RESETOVAT KARIÉRU
-          </button>
-        ) : (
-          <div className="mx-auto max-w-sm border-2 border-gembl-red bg-gembl-paper p-4">
-            <p className="text-sm text-gembl-ink">Opravdu chceš resetovat kariéru? Tohle nevratně smaže tvůj postup.</p>
-            <div className="mt-3 flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={handleResetConfirm}
-                className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-4 py-2 text-sm font-semibold uppercase tracking-wide text-gembl-paper shadow-hard-sm transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
-              >
-                Ano, resetovat
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowResetConfirm(false)}
-                className="min-h-[40px] border border-gembl-ink px-4 py-2 text-sm text-gembl-ink transition hover:bg-gembl-paper-dark"
-              >
-                Zrušit
-              </button>
+                <button
+                  type="button"
+                  onClick={handleSpin}
+                  disabled={!canSpin}
+                  className="min-h-[52px] w-full max-w-xs border-2 border-gembl-ink bg-gembl-red px-6 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
+                >
+                  {spinning ? "TOČÍ SE…" : `VSADIT ${bet} G`}
+                </button>
+                <p className="text-center text-[11px] text-gembl-muted">
+                  Upozornění: V této hře není možné vyhrát. Sázka je {MIN_BET}–{MAX_BET} G (po {BET_STEP}), výhra je vždy 0 G.
+                </p>
+                {!canSpin && !spinning && (
+                  <button type="button" onClick={() => setShowCreditGate(true)} className="text-center text-sm font-semibold text-gembl-red underline">
+                    {loggedIn ? "Nemáš dost kreditů. Dobij G a hraj dál." : "Nemáš dost kreditů. Přihlas se a dobij G."}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        )}
+
+          {/* Statistiky + reset kariéry (součást herní obrazovky) */}
+          <div className="gembl-block p-5">
+            <h2 className="gembl-section-heading text-lg">Statistiky</h2>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+              <StatItem label="Zůstatek" value={`${displayCredits.toLocaleString("cs-CZ")} G`} />
+              <StatItem label="Spinů" value={player.totalSpins.toLocaleString("cs-CZ")} />
+              <StatItem label="Protočeno" value={`${player.totalWagered.toLocaleString("cs-CZ")} G`} />
+              <StatItem label="Vyhráno" value={`${player.totalWon.toLocaleString("cs-CZ")} G`} />
+              <StatItem label="Čistá ztráta" value={`${netLoss.toLocaleString("cs-CZ")} G`} />
+            </dl>
+          </div>
+
+          <div className="text-center">
+            {!showResetConfirm ? (
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(true)}
+                className="min-h-[44px] border border-gembl-ink px-4 py-2 text-sm uppercase tracking-wide text-gembl-muted transition hover:border-gembl-red hover:text-gembl-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
+              >
+                RESETOVAT KARIÉRU
+              </button>
+            ) : (
+              <div className="mx-auto max-w-sm border-2 border-gembl-red bg-gembl-paper p-4">
+                <p className="text-sm text-gembl-ink">Opravdu chceš resetovat kariéru? Tohle nevratně smaže tvůj postup.</p>
+                <div className="mt-3 flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleResetConfirm}
+                    className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-4 py-2 text-sm font-semibold uppercase tracking-wide text-gembl-paper shadow-hard-sm transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
+                  >
+                    Ano, resetovat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowResetConfirm(false)}
+                    className="min-h-[40px] border border-gembl-ink px-4 py-2 text-sm text-gembl-ink transition hover:bg-gembl-paper-dark"
+                  >
+                    Zrušit
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {showCreditGate && <CreditGateModal loggedIn={loggedIn} onClose={() => setShowCreditGate(false)} callbackUrl="/automaty" />}

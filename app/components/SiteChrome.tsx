@@ -29,7 +29,7 @@ import Header from "./Header";
 // /casino stage, která se zapíná jen nad skin.minStageWidth (pod ní jede
 // LegacyCasinoLayout s headerem/footerem). Scéna si vlastní layout i
 // `min-h-screen` řeší sama (viz app/(site)/skorapky/ShellGame.tsx).
-const STANDALONE_GAME_ROUTES = new Set<string>(["/skorapky"]);
+const STANDALONE_GAME_ROUTES = new Set<string>(["/skorapky", "/losy", "/automaty"]);
 
 export default function SiteChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
