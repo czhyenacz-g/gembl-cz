@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CreditGateModal from "../../components/wallet/CreditGateModal";
@@ -23,6 +24,22 @@ const TICKET_PRICE = MIN_BET;
 // zadání "fade-out ~300-500 ms, pak krátký delay, pak result").
 const REVEAL_FADE_MS = 400;
 const REVEAL_RESULT_DELAY_MS = 400;
+
+// Nová herní scéna = jeden artwork (public/skins/losy/losy.webp). Overlay
+// prvky se pozicují v % vůči tomuto canvasu, takže drží na obrázku na
+// libovolné šířce bez jakýchkoli JS přepočtů (čisté CSS). Hodnoty jsou
+// měřené z artworku a dají se tady snadno doladit.
+const SCENE_WIDTH = 1536;
+const SCENE_HEIGHT = 1024;
+// Připravená světlá plocha uprostřed artworku — sem patří samotný los.
+const CARD_RECT = { left: 27, top: 33, width: 46, height: 35 };
+// Vytištěné "← ZPĚT" a logo GEMBL.CZ v horních rozích.
+const BACK_RECT = { left: 9.4, top: 1.9, width: 12, height: 6 };
+const LOGO_RECT = { left: 81, top: 1.9, width: 14.7, height: 5.5 };
+
+function pct(rect: { left: number; top: number; width: number; height: number }) {
+  return { left: `${rect.left}%`, top: `${rect.top}%`, width: `${rect.width}%`, height: `${rect.height}%` };
+}
 
 const STATUS_TEXT: Record<Exclude<ScratchTicketPhase, "result">, string> = {
   idle: "Setři si své štěstí.",
@@ -188,127 +205,125 @@ export default function ScratchCard() {
   }
 
   const canBuy = phase === "idle" && effectiveCredits !== null && effectiveCredits >= TICKET_PRICE;
-  const showTicket = phase === "scratching" || phase === "revealing" || phase === "result";
   const statusText = phase === "result" ? (resultMessage ?? "") : STATUS_TEXT[phase];
 
   return (
-    <div className="gembl-scene flex min-h-screen flex-col overflow-hidden">
-      <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col px-3 py-4 sm:px-6 sm:py-8">
-        {/* Horní lišta scény — jen návrat na titulní stranu kasina a brand;
-            žádné běžné webové menu/patička (viz zadání samostatná hra). */}
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            href="/casino"
-            className="inline-flex min-h-[44px] items-center gap-2 border-2 border-gembl-ink bg-gembl-paper px-3 font-serif text-sm font-bold uppercase tracking-wide text-gembl-ink shadow-hard-sm transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
-          >
-            <span aria-hidden="true" className="text-lg leading-none">
-              ←
-            </span>
-            Zpět
-          </Link>
-          <span className="gembl-tag gembl-tag--accent">GEMBL.cz</span>
+    <div className="flex min-h-screen w-full items-center justify-center bg-gembl-paper p-2 sm:p-4">
+      {/* Název je součástí artworku (viz zadání "neduplikuj text z obrázku") —
+          h1 zůstává jen pro SEO/accessibility, vizuálně skrytý. */}
+      <h1 className="sr-only">Online losy</h1>
+
+      <div
+        className="relative mx-auto w-full max-w-[1600px] select-none"
+        style={{ aspectRatio: `${SCENE_WIDTH} / ${SCENE_HEIGHT}` }}
+      >
+        <Image
+          src="/skins/losy/losy.webp"
+          alt="Online losy — hrací stůl se stíracím losem"
+          width={SCENE_WIDTH}
+          height={SCENE_HEIGHT}
+          priority
+          className="absolute inset-0 h-full w-full object-contain"
+        />
+
+        {/* Zpět — klikací overlay nad vytištěným "← ZPĚT". */}
+        <Link
+          href="/casino"
+          aria-label="Zpět do kasina"
+          className="absolute z-10 rounded-[var(--gembl-radius)] transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
+          style={pct(BACK_RECT)}
+        />
+
+        {/* Logo GEMBL.CZ — klikací stejně jako logo v headeru. */}
+        <Link
+          href="/casino"
+          aria-label="GEMBL.cz — kasino"
+          className="absolute z-10 rounded-[var(--gembl-radius)] transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
+          style={pct(LOGO_RECT)}
+        />
+
+        {/* Samotný los — přesně do připravené světlé plochy uprostřed; žádný
+            vlastní rámeček/panel (ten už má artwork). */}
+        <div className="absolute z-10 overflow-hidden" style={pct(CARD_RECT)}>
+          <div className="flex h-full items-center justify-center gap-[8%] text-[clamp(2rem,4.5vw,4rem)]">
+            {ticketResult?.symbols.map((symbol, index) => (
+              <span key={index}>{SYMBOL_DISPLAY[symbol]}</span>
+            ))}
+          </div>
+          {(phase === "scratching" || phase === "revealing") && (
+            <ScratchLayer
+              key={roundKey}
+              active={phase === "scratching"}
+              fading={phase === "revealing"}
+              onThresholdReached={handleThresholdReached}
+            />
+          )}
         </div>
 
-        {/* Herní scéna — rámeček jako hrací stůl/deska, přes který se skládá
-            los (obdoba artwork stage na /casino). */}
-        <div className="mt-4 flex flex-1 items-center">
-          <div className="w-full border-[3px] border-gembl-ink bg-gembl-paper-dark shadow-hard">
-            {/* Název hry + krátká instrukce */}
-            <div className="border-b-[3px] border-gembl-ink bg-gembl-red px-4 py-3 text-center">
-              <h1 className="font-serif text-3xl font-black uppercase tracking-wide text-gembl-paper sm:text-4xl">Online losy</h1>
-              <p className="mt-1 font-serif text-xs italic text-gembl-paper sm:text-sm">Setři si své štěstí. Výhra je vždy 0 G.</p>
-            </div>
+        {/* Stav / hláška hry */}
+        <p
+          className="absolute z-10 border-2 border-gembl-ink bg-gembl-paper px-3 py-1 text-center font-serif text-xs font-bold text-gembl-ink shadow-hard-sm sm:text-base"
+          style={{ left: "50%", top: "74%", maxWidth: "72%", transform: "translate(-50%, -50%)" }}
+        >
+          {statusText}
+          {phase === "scratching" && (
+            <span className="mt-0.5 block text-[0.6rem] font-normal text-gembl-muted sm:text-xs">
+              Přejeď myší nebo prstem přes los.
+            </span>
+          )}
+        </p>
 
-            {/* Hrací plocha = los na stole */}
-            <div className="gembl-table-surface m-3 px-3 py-6 sm:m-5 sm:px-6 sm:py-8">
-              <div className="flex justify-center">
-                {!showTicket ? (
-                  <div className="flex h-36 w-full max-w-sm items-center justify-center border-2 border-gembl-ink bg-gembl-paper-dark font-serif text-sm font-bold uppercase tracking-wide text-gembl-muted shadow-hard-sm">
-                    Zavřený los
-                  </div>
-                ) : (
-                  <div className="relative h-36 w-full max-w-sm overflow-hidden border-2 border-gembl-ink bg-gembl-paper shadow-hard-sm">
-                    <div className="flex h-full items-center justify-center gap-6 text-4xl sm:text-5xl">
-                      {ticketResult?.symbols.map((symbol, index) => (
-                        <span key={index}>{SYMBOL_DISPLAY[symbol]}</span>
-                      ))}
-                    </div>
-                    {(phase === "scratching" || phase === "revealing") && (
-                      <ScratchLayer
-                        key={roundKey}
-                        active={phase === "scratching"}
-                        fading={phase === "revealing"}
-                        onThresholdReached={handleThresholdReached}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
+        {/* Ovládání + cena/zůstatek */}
+        <div className="absolute left-1/2 top-[88%] z-10 flex w-[92%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-2 sm:top-[80%] sm:gap-3">
+          <span className="gembl-tag text-[0.65rem] sm:text-sm">
+            Cena: <strong className="font-mono font-semibold text-gembl-ink">{TICKET_PRICE} G</strong>
+          </span>
 
-              {phase === "scratching" && <p className="mt-3 text-center text-xs text-gembl-muted">Přejeď myší nebo prstem přes los.</p>}
+          {phase === "idle" && (
+            <button
+              type="button"
+              onClick={handleBuy}
+              disabled={!canBuy}
+              className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-[clamp(0.9rem,2vw,1.5rem)] py-2 font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper sm:text-lg"
+            >
+              KOUPIT LOS
+            </button>
+          )}
 
-              <div className="mt-4 min-h-[1.75rem] text-center">
-                <p className="font-serif text-lg font-bold text-gembl-ink">{statusText}</p>
-              </div>
-            </div>
+          {phase === "purchasing" && (
+            <button
+              type="button"
+              disabled
+              className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-[clamp(0.9rem,2vw,1.5rem)] py-2 font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper opacity-40 shadow-hard sm:text-lg"
+            >
+              KUPUJI…
+            </button>
+          )}
 
-            {/* Ovládání + info o ceně/zůstatku */}
-            <div className="border-t-[3px] border-gembl-ink px-4 py-4 sm:px-6 sm:py-5">
-              <div className="flex flex-col items-center gap-3">
-                {phase === "idle" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleBuy}
-                      disabled={!canBuy}
-                      className="min-h-[52px] w-full max-w-xs border-2 border-gembl-ink bg-gembl-red px-6 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
-                    >
-                      KOUPIT LOS
-                    </button>
-                    {effectiveCredits !== null && effectiveCredits < TICKET_PRICE && (
-                      <button
-                        type="button"
-                        onClick={() => setShowCreditGate(true)}
-                        className="text-center text-sm font-semibold text-gembl-red underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
-                      >
-                        {loggedIn ? "Nemáš dost kreditů. Dobij G a hraj dál." : "Nemáš dost kreditů. Přihlas se a dobij G."}
-                      </button>
-                    )}
-                  </>
-                )}
+          {phase === "result" && (
+            <button
+              type="button"
+              onClick={handleBuyAnother}
+              className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-[clamp(0.9rem,2vw,1.5rem)] py-2 font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper sm:text-lg"
+            >
+              KOUPIT DALŠÍ LOS
+            </button>
+          )}
 
-                {phase === "purchasing" && (
-                  <button
-                    type="button"
-                    disabled
-                    className="min-h-[52px] w-full max-w-xs border-2 border-gembl-ink bg-gembl-red px-6 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper opacity-40 shadow-hard"
-                  >
-                    KUPUJI…
-                  </button>
-                )}
+          <span className="gembl-tag text-[0.65rem] sm:text-sm">
+            Zůstatek:{" "}
+            <strong className="font-mono font-semibold text-gembl-ink">{displayCredits.toLocaleString("cs-CZ")} G</strong>
+          </span>
 
-                {phase === "result" && (
-                  <button
-                    type="button"
-                    onClick={handleBuyAnother}
-                    className="min-h-[52px] w-full max-w-xs border-2 border-gembl-ink bg-gembl-red px-6 py-3 font-serif text-lg font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
-                  >
-                    KOUPIT DALŠÍ LOS
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm text-gembl-muted">
-                <span className="gembl-tag">
-                  Cena: <strong className="font-mono font-semibold text-gembl-ink">{TICKET_PRICE} G</strong>
-                </span>
-                <span className="gembl-tag">
-                  Zůstatek:{" "}
-                  <strong className="font-mono font-semibold text-gembl-ink">{displayCredits.toLocaleString("cs-CZ")} G</strong>
-                </span>
-              </div>
-            </div>
-          </div>
+          {phase === "idle" && effectiveCredits !== null && effectiveCredits < TICKET_PRICE && (
+            <button
+              type="button"
+              onClick={() => setShowCreditGate(true)}
+              className="gembl-tag text-[0.65rem] font-semibold text-gembl-red sm:text-sm"
+            >
+              {loggedIn ? "Nemáš dost kreditů. Dobij G." : "Nemáš dost kreditů. Přihlas se a dobij G."}
+            </button>
+          )}
         </div>
       </div>
 
