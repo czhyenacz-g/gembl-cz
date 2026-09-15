@@ -12,8 +12,18 @@ export const classicSkin: CasinoSkin = {
   designHeight: 1086,
   minStageWidth: 1100,
   background: {
-    src: "/skins/classic/casino-desktop.webp",
+    // Varianty téhož posteru (liší se jen symboly na válcích) — pomalu se
+    // střídají crossfadem, aby stage působila živěji (viz
+    // stage/StageBackground.tsx). `src` = první snímek, ať první paint a
+    // start slideshow míří na stejnou URL (žádné bliknutí při hydrataci).
+    src: "/skins/classic/casino-desktop-01.webp",
     alt: "",
+    frames: [
+      "/skins/classic/casino-desktop-01.webp",
+      "/skins/classic/casino-desktop-02.webp",
+      "/skins/classic/casino-desktop-03.webp",
+      "/skins/classic/casino-desktop-04.webp",
+    ],
   },
   layout: {
     logoHome: { x: 170, y: 35, width: 350, height: 70 },

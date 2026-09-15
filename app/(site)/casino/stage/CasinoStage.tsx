@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { CasinoSkin } from "../../../../lib/casino-skins/index.ts";
+import StageBackground from "./StageBackground.tsx";
 
 // Referenční canvas = skutečné rozměry background obrázku (skin.designWidth/
 // designHeight). Jediný scaling mechanismus v celé stage vrstvě: změř
@@ -47,12 +48,16 @@ export default function CasinoStage({ skin, children }: { skin: CasinoSkin; chil
   return (
     <div ref={wrapperRef} className="relative mx-auto w-full" style={{ maxWidth: 1800 }}>
       {scale === null ? (
+        // První statický snímek pro SSR a stav, než se změří `scale` —
+        // záměrně stejná URL jako první frame slideshow (`unoptimized`), ať
+        // při hydrataci neproblikne prázdné pozadí (viz StageBackground.tsx).
         <Image
           src={skin.background.src}
           alt={skin.background.alt}
           width={skin.designWidth}
           height={skin.designHeight}
           priority
+          unoptimized
           className="block h-auto w-full select-none"
         />
       ) : (
@@ -66,13 +71,11 @@ export default function CasinoStage({ skin, children }: { skin: CasinoSkin; chil
               transformOrigin: "top left",
             }}
           >
-            <Image
-              src={skin.background.src}
+            <StageBackground
               alt={skin.background.alt}
+              frames={skin.background.frames ?? [skin.background.src]}
               width={skin.designWidth}
               height={skin.designHeight}
-              priority
-              className="pointer-events-none block select-none"
             />
             {children}
           </div>

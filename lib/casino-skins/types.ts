@@ -23,7 +23,13 @@ export type CasinoSkin = {
   designHeight: number;
   /** Pod touto šířkou viewportu se stage nepoužívá (viz CasinoSkinSwitch), zůstává současný mobilní layout. */
   minStageWidth: number;
-  background: { src: string; alt: string };
+  /**
+   * Background artwork. `src` je vždy první snímek / fallback (SSR, no-JS i
+   * stav, než se změří `scale`). Volitelné `frames` zapnou pomalý crossfade
+   * slideshow (viz stage/StageBackground.tsx); `src` by měl odpovídat
+   * prvnímu snímku, ať při hydrataci neproblikne prázdné pozadí.
+   */
+  background: { src: string; alt: string; frames?: string[] };
   layout: {
     /** Klikací plocha přes "GEMBL.cz" nápis v artworku — vede na homepage. */
     logoHome: SkinRect;
