@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-export type SessionState = { status: "loading" } | { status: "guest" } | { status: "authenticated"; email: string; credits: number };
+export type SessionState =
+  | { status: "loading" }
+  | { status: "guest" }
+  | { status: "authenticated"; email: string; credits: number; hasClaimedWelcomeBonus: boolean };
 
-type MeResponse = { loggedIn: boolean; email?: string; credits?: number };
+type MeResponse = { loggedIn: boolean; email?: string; credits?: number; hasClaimedWelcomeBonus?: boolean };
 
 // Malý pub/sub podobný lib/casino/storage.ts (subscribePlayerState) — po
 // akci, co mění balance na serveru (spin, dokončený nákup, login/logout),
@@ -21,7 +24,12 @@ async function fetchSession(): Promise<SessionState> {
     const response = await fetch("/api/auth/me", { cache: "no-store" });
     const data = (await response.json()) as MeResponse;
     if (data.loggedIn && typeof data.email === "string" && typeof data.credits === "number") {
-      return { status: "authenticated", email: data.email, credits: data.credits };
+      return {
+        status: "authenticated",
+        email: data.email,
+        credits: data.credits,
+        hasClaimedWelcomeBonus: data.hasClaimedWelcomeBonus === true,
+      };
     }
     return { status: "guest" };
   } catch {

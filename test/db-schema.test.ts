@@ -28,4 +28,9 @@ describe("db/schema.sql", () => {
     assert.match(schema, /token_hash TEXT NOT NULL UNIQUE,/);
     assert.doesNotMatch(schema, /\btoken TEXT/);
   });
+
+  test("magic_link_tokens: pending_prize_g existuje v CREATE TABLE i jako idempotentní ALTER TABLE ADD COLUMN IF NOT EXISTS (pro DB založené před touto featurou)", () => {
+    assert.match(schema, /pending_prize_g INTEGER,\n\s*created_at TIMESTAMPTZ NOT NULL DEFAULT now\(\)\n\);/);
+    assert.match(schema, /ALTER TABLE magic_link_tokens ADD COLUMN IF NOT EXISTS pending_prize_g INTEGER;/);
+  });
 });

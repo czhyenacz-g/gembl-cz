@@ -18,14 +18,27 @@ CREATE TABLE IF NOT EXISTS users (
 -- Magic-link přihlašovací tokeny. Ukládá se jen SHA-256 hash tokenu, nikdy
 -- token samotný (viz lib/auth/tokens.ts) — únik DB tak nikomu nedá platný
 -- přihlašovací odkaz. `used_at` dělá token jednorázovým.
+-- `pending_prize_g` = základní částka welcome-prize popupu (viz
+-- lib/onboarding/welcome-prize.ts), asociovaná s tímhle konkrétním
+-- magic-linkem V OKAMŽIKU JEHO VYŽÁDÁNÍ (server čte podepsanou cookie
+-- návštěvníka, ne tělo requestu) — NULL, pokud návštěvník žádnou pending
+-- výhru neměl. Verify route ji ×2 připíše jako WELCOME_BONUS (viz
+-- app/api/auth/verify/route.ts). Uložením na token, ne jen v cookie,
+-- funguje i když se magic-link otevře na jiném zařízení/prohlížeči, než
+-- kde byl vyžádaný.
 CREATE TABLE IF NOT EXISTS magic_link_tokens (
   id SERIAL PRIMARY KEY,
   email TEXT NOT NULL,
   token_hash TEXT NOT NULL UNIQUE,
   expires_at TIMESTAMPTZ NOT NULL,
   used_at TIMESTAMPTZ,
+  pending_prize_g INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Idempotentní přídavek pro DB založené před touto featurou (CREATE TABLE
+-- výš se na existující tabulce přeskočí) — bezpečně opakovatelné.
+ALTER TABLE magic_link_tokens ADD COLUMN IF NOT EXISTS pending_prize_g INTEGER;
 
 CREATE INDEX IF NOT EXISTS magic_link_tokens_email_idx ON magic_link_tokens (email);
 

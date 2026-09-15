@@ -35,8 +35,26 @@ describe("POST /api/auth/magic-link", () => {
 
   test("email se normalizuje (normalizeEmail) dřív, než se použije pro token/rate-limit/odeslání", () => {
     const normalizeIndex = magicLinkSource.indexOf("normalizeEmail(rawEmail)");
-    const createTokenIndex = magicLinkSource.indexOf("createMagicLinkToken(email)");
+    const createTokenIndex = magicLinkSource.indexOf("createMagicLinkToken(email, baseWelcomePrizeG)");
     assert.ok(normalizeIndex !== -1 && createTokenIndex !== -1 && normalizeIndex < createTokenIndex);
+  });
+
+  test("welcome-prize základní částka se čte VÝHRADNĚ z podepsané cookie requestu (verifyPendingPrizeCookieValue), nikdy z těla", () => {
+    assert.match(
+      magicLinkSource,
+      /import \{ PENDING_PRIZE_COOKIE_NAME, resolveBaseAmountG, verifyPendingPrizeCookieValue \} from "\.\.\/\.\.\/\.\.\/\.\.\/lib\/onboarding\/welcome-prize"/
+    );
+    assert.match(
+      magicLinkSource,
+      /const pendingPrizeFromCookie = verifyPendingPrizeCookieValue\(cookieStore\.get\(PENDING_PRIZE_COOKIE_NAME\)\?\.value\);/
+    );
+    assert.doesNotMatch(magicLinkSource, /pendingPrizeG\s*[:=]\s*(typeof )?body/i);
+  });
+
+  test("stejná resolvnutá částka (baseWelcomePrizeG) jde na token I do e-mailu — text mailu se nesmí rozejít s tím, co se pak připíše", () => {
+    assert.match(magicLinkSource, /const baseWelcomePrizeG = resolveBaseAmountG\(pendingPrizeFromCookie\);/);
+    assert.match(magicLinkSource, /createMagicLinkToken\(email, baseWelcomePrizeG\)/);
+    assert.match(magicLinkSource, /sendMagicLinkEmail\(\{ to: email, loginUrl, welcomePrizeG: baseWelcomePrizeG \}\)/);
   });
 });
 
@@ -51,14 +69,22 @@ describe("GET /api/auth/verify", () => {
   });
 
   test("uživatel se založí/dohledá a welcome bonus se udělí v JEDNÉ atomické operaci (findOrCreateUserAndGrantWelcomeBonus), ne ručním připočtením credits", () => {
-    assert.match(verifySource, /const \{ userId \} = await findOrCreateUserAndGrantWelcomeBonus\(consumed\.email, WELCOME_BONUS_G\);/);
+    assert.match(verifySource, /const \{ userId \} = await findOrCreateUserAndGrantWelcomeBonus\(consumed\.email, welcomeBonusG\);/);
     assert.doesNotMatch(verifySource, /credits\s*\+=|credits:\s*\d+/);
     // Žádný samostatný INSERT/UPSERT uživatele mimo ledger.ts — atomicita by se jinak rozpadla na dva kroky.
     assert.doesNotMatch(verifySource, /INSERT INTO users/);
   });
 
-  test("welcome bonus je přesně 1000 G", () => {
-    assert.match(verifySource, /const WELCOME_BONUS_G = 1000;/);
+  test("welcome bonus = základní pending-prize částka (asociovaná s tokenem při vyžádání) × WELCOME_PRIZE_LOGIN_MULTIPLIER, ne pevná konstanta", () => {
+    assert.match(
+      verifySource,
+      /const welcomeBonusG = resolveBaseAmountG\(consumed\.pendingPrizeG\) \* WELCOME_PRIZE_LOGIN_MULTIPLIER;/
+    );
+    assert.doesNotMatch(verifySource, /const WELCOME_BONUS_G = \d+;/);
+  });
+
+  test("pending-prize cookie se po úspěšném přihlášení smaže (výhra je vyzvednutá, další zobrazování stejného čísla nedává smysl)", () => {
+    assert.match(verifySource, /response\.cookies\.delete\(PENDING_PRIZE_COOKIE_NAME\);/);
   });
 
   test("callbackUrl je sanitizovaný před použitím v redirectu (obrana proti open-redirectu)", () => {

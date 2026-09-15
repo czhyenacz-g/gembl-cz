@@ -8,6 +8,7 @@ import CreditGateOnArrival from "./CreditGateOnArrival";
 import LegacyCasinoLayout from "./LegacyCasinoLayout.tsx";
 import PaymentStatusBanner from "./PaymentStatusBanner";
 import ClassicCasinoStage from "./stage/ClassicCasinoStage.tsx";
+import WelcomePrizeOnArrival from "./WelcomePrizeOnArrival.tsx";
 
 const PATHNAME = "/casino";
 
@@ -32,11 +33,11 @@ export default function Home() {
           obsahují komponenty s vedlejšími efekty při mountu (impression
           tracking v PromotionSlot, useSession() fetch) a smí být mountnutá
           vždy jen jedna z nich zároveň — viz komentář v CasinoViewSwitch.tsx.
-          `CreditGateOnArrival` patří JEN do legacy větve — stage má
-          rovnocennou "credit gate při příchodu" funkci uvnitř SlotMachine
-          embedded (viz creditGate prop v ClassicCasinoStage.tsx); kdyby
-          `CreditGateOnArrival` běžel i pro stage, otevřely by se dva
-          modaly zároveň (viz zadání "dvojí dialog"). */}
+          `CreditGateOnArrival`/`WelcomePrizeOnArrival` patří JEN do legacy
+          větve — stage má rovnocenné funkce uvnitř svého centrálního
+          modal stavu (viz creditGate prop a useWelcomePrizePopup v
+          ClassicCasinoStage.tsx); kdyby běžely i pro stage, otevřely by se
+          dva modaly zároveň (viz zadání "dvojí dialog"). */}
       <CasinoViewSwitch
         stage={
           <ClassicCasinoStage
@@ -47,6 +48,7 @@ export default function Home() {
         legacy={
           <>
             <LegacyCasinoLayout pathname={PATHNAME} />
+            <WelcomePrizeOnArrival />
             <CreditGateOnArrival />
           </>
         }
