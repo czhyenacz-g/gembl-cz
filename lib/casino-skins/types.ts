@@ -8,10 +8,11 @@
 /** Obdélníková zóna v designových px (souřadnicový systém = skutečné rozměry background obrázku). */
 export type SkinRect = { x: number; y: number; width: number; height: number };
 
+// `active` NENÍ součástí dat — zvýraznění se počítá dynamicky z aktuálního
+// pathname (viz MenuOverlay.tsx isActiveHref), ne ze statického flagu tady.
 export type ClassicMenuItem = {
   label: string;
   href: string | null;
-  active?: boolean;
 };
 
 export type CasinoSkin = {
@@ -27,7 +28,7 @@ export type CasinoSkin = {
     /** Klikací plocha přes "GEMBL.cz" nápis v artworku — vede na homepage. */
     logoHome: SkinRect;
     menu: {
-      /** Řádky menu shora dolů — první je vždy aktivní (Automaty), zbytek buď reálná route, nebo disabled "brzy". */
+      /** Řádky menu shora dolů — aktivní položka se určuje z pathname (viz MenuOverlay.tsx), ne z pořadí tady. */
       items: ClassicMenuItem[];
       rows: SkinRect[];
     };
