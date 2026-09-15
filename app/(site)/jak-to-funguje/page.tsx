@@ -60,7 +60,7 @@ export default function JakToFungujePage() {
           Bez přihlášení se statistiky ukládají jen v tvém prohlížeči (localStorage) — po refreshi stránky o nic
           nepřijdeš, kdykoliv můžeš kariéru vynulovat tlačítkem „RESETOVAT KARIÉRU&ldquo; na stránce Automaty a začít
           zase od {STARTING_CREDITS.toLocaleString("cs-CZ")} G. Přihlášení (jen email, žádné heslo) ti navíc jednou
-          připíše bonus 1 000 G a dá ti zůstatek dostupný napříč zařízeními — a jen přihlášený účet si může G i dokoupit.
+          připíše bonus až 800 G a dá ti zůstatek dostupný napříč zařízeními — a jen přihlášený účet si může G i dokoupit.
         </p>
       </section>
     </div>

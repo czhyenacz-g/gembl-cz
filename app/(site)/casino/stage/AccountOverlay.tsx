@@ -69,7 +69,7 @@ export default function AccountOverlay({
         onClick={() => (loggedIn ? onRequestTopUp() : onRequestLogin())}
         className="flex items-center justify-center bg-transparent font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
       >
-        {loggedIn ? "Dobít kredit" : "Získat 1 000 G"}
+        {loggedIn ? "Dobít kredit" : "Získat až 800 G"}
       </button>
 
       <button

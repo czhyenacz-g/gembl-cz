@@ -17,7 +17,7 @@ const FAIR_TERMS = [
 const HERO_BULLETS = ["Hraj s virtuálními kredity", "Výhra není možná", "Vždycky skoro"] as const;
 
 const HOW_IT_WORKS = [
-  { title: "Dostaneš kredity", subtitle: "100 G hned, 1000 G za přihlášení" },
+  { title: "Dostaneš kredity", subtitle: "100 G hned, až 800 G za přihlášení" },
   { title: "Hraj automaty", subtitle: "a sleduj, jak mizí" },
   { title: "Vždycky skoro", subtitle: "výhra je vždycky těsně vedle" },
 ] as const;

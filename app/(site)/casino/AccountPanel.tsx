@@ -43,7 +43,7 @@ export default function AccountPanel() {
 
         {!loggedIn && (
           <p className="mt-3 text-xs text-gembl-muted">
-            Dochází G? Přihlas se jen e-mailem a dostaneš <strong className="text-gembl-ink">1 000 G zdarma</strong>.
+            Dochází G? Přihlas se jen e-mailem a dostaneš <strong className="text-gembl-ink">až 800 G zdarma</strong>.
           </p>
         )}
 
@@ -54,7 +54,7 @@ export default function AccountPanel() {
             </button>
           ) : (
             <button type="button" className="gembl-cta w-full" onClick={() => setShowLogin(true)}>
-              Získat 1 000 G
+              Získat až 800 G
             </button>
           )}
           <button type="button" className="gembl-cta gembl-cta--disabled w-full" disabled>
