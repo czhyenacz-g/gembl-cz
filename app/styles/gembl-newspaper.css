@@ -347,3 +347,41 @@
   cursor: default;
   pointer-events: none;
 }
+
+/* ---------------------------------------------------------------------
+ * Samostatná herní scéna (např. /skorapky) — velký dekorativní podklad,
+ * přes který se skládají herní prvky. Stejný princip jako artwork stage na
+ * /casino, ale čistě CSS (dokud pro hru není finální ilustrace). Jemný
+ * diagonální rastr je stejný motiv jako u artwork placeholderu výš.
+ */
+.gembl-scene {
+  position: relative;
+  background-color: var(--gembl-paper);
+}
+
+.gembl-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(17, 17, 17, 0.05) 0,
+    rgba(17, 17, 17, 0.05) 1px,
+    transparent 1px,
+    transparent 16px
+  );
+  pointer-events: none;
+}
+
+/* Hrací stůl/deska pod herními prvky — světlejší plocha s vnitřním
+ * "dvojitým" rámečkem (inset stín), ať tři pozice kelímků působí ukotveně
+ * na stole, ne jako volně plovoucí. */
+.gembl-table-surface {
+  position: relative;
+  background-color: var(--gembl-paper);
+  border: var(--gembl-border-thin) solid var(--gembl-ink);
+  border-radius: var(--gembl-radius);
+  box-shadow:
+    inset 0 0 0 3px var(--gembl-paper),
+    inset 0 0 0 4px var(--gembl-line);
+}
