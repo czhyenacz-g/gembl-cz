@@ -11,6 +11,8 @@ import { createInitialPlayerState, loadPlayerState, resetPlayerState, savePlayer
 import type { PlayerState, SlotSymbol } from "../../../lib/casino/types";
 import { BET_STEP, MAX_BET, MIN_BET } from "../../config/site";
 import { maxAffordableBet } from "../../../lib/wallet/bet";
+import type { CasinoSkin } from "../../../lib/casino-skins/index.ts";
+import { rectStyle } from "../../../lib/casino-skins/rect-style.ts";
 import AchievementToast from "./AchievementToast";
 import Reel from "./Reel";
 
@@ -36,7 +38,18 @@ type ToastItem = { key: number; title: string };
 // 10) je čistě UI stav, nepersistuje se mezi reloady — po odehrání se
 // zachovává pro další kolo, jen se sráží (clamp), když na ni přestane
 // stačit zůstatek (viz efekt níž).
-export default function SlotMachine() {
+type SlotMachineProps = {
+  /** Když true (+ `layout`), vykreslí jen holé živé prvky napozicované
+   * podle `layout` (viz app/(site)/casino/stage/) místo vlastního
+   * `gembl-block` boxu se statistikami/resetem — pro overlay nad /casino
+   * artwork skinem. Veškerá logika/state výš je STEJNÁ v obou režimech,
+   * mění se jen JSX na konci komponenty (viz zadání "měnit primárně
+   * prezentační vrstvu, ne business logiku"). */
+  embedded?: boolean;
+  layout?: CasinoSkin["layout"]["slot"];
+};
+
+export default function SlotMachine({ embedded, layout }: SlotMachineProps = {}) {
   const { session, refresh: refreshSession } = useSession();
   const [mounted, setMounted] = useState(false);
   const [player, setPlayer] = useState<PlayerState | null>(null);
@@ -243,6 +256,10 @@ export default function SlotMachine() {
   }
 
   if (!mounted || !player) {
+    // Embedded (/casino stage): dokud není hydratováno, necháme prostě
+    // vidět artwork idle stav pod tím — žádný pulsing skeleton box přes
+    // připravené plochy.
+    if (embedded) return null;
     return (
       <div className="flex justify-center py-16">
         <div className="h-28 w-64 animate-pulse border border-gembl-line bg-gembl-paper-dark" />
@@ -253,6 +270,85 @@ export default function SlotMachine() {
   const canSpin = !spinning && effectiveCredits !== null && effectiveCredits >= bet && bet >= MIN_BET;
   const netLoss = player.totalWagered - player.totalWon;
   const displayCredits = effectiveCredits ?? player.credits;
+
+  if (embedded && layout) {
+    return (
+      <>
+        <div className="fixed right-4 top-20 z-50 flex flex-col gap-2 sm:top-24">
+          {toasts.map((t) => (
+            <AchievementToast key={t.key} title={t.title} onDismiss={() => dismissToast(t.key)} />
+          ))}
+        </div>
+
+        {/* Idle stav = artwork samo (statické symboly v obrázku) — živé
+            válce se ukážou, až se má co ukazovat (spin/výsledek), viz
+            zadání "pokud artwork obsahuje statické symboly, použij je
+            jako idle state". */}
+        {(spinning || reels) && (
+          <div style={rectStyle(layout.reels)} className="flex items-center justify-center gap-2">
+            <Reel symbol={reels ? reels[0] : null} spinning={spinning} />
+            <Reel symbol={reels ? reels[1] : null} spinning={spinning} />
+            <Reel symbol={reels ? reels[2] : null} spinning={spinning} />
+          </div>
+        )}
+
+        <div style={rectStyle(layout.resultMessage)} className="flex flex-col items-center justify-center gap-1 px-2 text-center">
+          {jackpotFlash && <p className="animate-pulse font-serif text-2xl font-black uppercase text-gembl-red">JACKPOT!</p>}
+          {!jackpotFlash && resultMessage && (
+            <>
+              <p className="font-serif text-base font-bold text-gembl-ink">Výhra: 0 G</p>
+              <p className="text-sm text-gembl-muted">{resultMessage}</p>
+            </>
+          )}
+        </div>
+
+        <div style={rectStyle(layout.stakeControl)} className="flex items-center justify-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-gembl-muted">Sázka</span>
+          <button
+            type="button"
+            onClick={() => adjustBet(-BET_STEP)}
+            disabled={spinning || bet <= MIN_BET}
+            aria-label="Snížit sázku"
+            className="flex h-8 w-8 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-lg font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
+          >
+            −
+          </button>
+          <span className="min-w-[4rem] text-center font-mono text-base font-bold text-gembl-ink">{bet} G</span>
+          <button
+            type="button"
+            onClick={() => adjustBet(BET_STEP)}
+            disabled={spinning || bet >= maxAllowedBet}
+            aria-label="Zvýšit sázku"
+            className="flex h-8 w-8 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-lg font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
+          >
+            +
+          </button>
+        </div>
+
+        <div style={rectStyle(layout.spinButton)} className="flex flex-col items-center justify-center gap-1.5 px-2">
+          <button
+            type="button"
+            onClick={handleSpin}
+            disabled={!canSpin}
+            className="min-h-[44px] w-full max-w-[240px] border-2 border-gembl-ink bg-gembl-red px-4 py-2 font-serif text-base font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
+          >
+            {spinning ? "TOČÍ SE…" : `VSADIT ${bet} G`}
+          </button>
+          {!canSpin && !spinning && (
+            <button
+              type="button"
+              onClick={() => setShowCreditGate(true)}
+              className="text-center text-xs font-semibold text-gembl-red underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
+            >
+              {loggedIn ? "Nemáš dost kreditů." : "Přihlas se a dobij G."}
+            </button>
+          )}
+        </div>
+
+        {showCreditGate && <CreditGateModal loggedIn={loggedIn} onClose={() => setShowCreditGate(false)} callbackUrl="/casino" />}
+      </>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-xl px-4">

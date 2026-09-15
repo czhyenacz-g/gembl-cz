@@ -1,0 +1,77 @@
+"use client";
+
+import { useState, useSyncExternalStore } from "react";
+import LoginModal from "../../../components/auth/LoginModal";
+import TopUpModal from "../../../components/wallet/TopUpModal";
+import { useSession } from "../../../../lib/auth/use-session-client.ts";
+import { loadPlayerState, subscribePlayerState } from "../../../../lib/casino/storage.ts";
+import type { CasinoSkin } from "../../../../lib/casino-skins/index.ts";
+import { rectStyle } from "../../../../lib/casino-skins/rect-style.ts";
+
+// Stejný zdroj pravdy jako AccountPanel.tsx (přihlášený = server přes
+// useSession, host = localStorage) — jen jiná prezentace (napozicovaná
+// nad artwork rámeček místo boxu v gridu). Business logika 1:1 stejná,
+// jen zdvojená prezentační vrstva (JSX), viz zadání "měnit primárně
+// prezentační vrstvu".
+export default function AccountOverlay({ layout }: { layout: CasinoSkin["layout"]["account"] }) {
+  const { session } = useSession();
+  const localCredits = useSyncExternalStore(
+    subscribePlayerState,
+    () => loadPlayerState().credits,
+    () => null
+  );
+  const [showLogin, setShowLogin] = useState(false);
+  const [showTopUp, setShowTopUp] = useState(false);
+
+  const loggedIn = session.status === "authenticated";
+  const credits = session.status === "authenticated" ? session.credits : localCredits;
+  const displayName = session.status === "authenticated" ? session.email : "Host";
+
+  return (
+    <>
+      <div
+        style={rectStyle(layout.avatar)}
+        aria-hidden="true"
+        className="flex items-center justify-center border-2 border-gembl-ink bg-gembl-paper font-serif text-lg font-black text-gembl-ink"
+      >
+        {loggedIn ? displayName.charAt(0).toUpperCase() : "?"}
+      </div>
+
+      <p
+        style={rectStyle(layout.name)}
+        className="flex items-center justify-center overflow-hidden truncate whitespace-nowrap px-2 text-center font-serif text-xs font-bold uppercase tracking-wide text-gembl-ink"
+        title={displayName}
+      >
+        {displayName}
+      </p>
+
+      <p
+        style={rectStyle(layout.balance)}
+        className="flex items-center justify-center overflow-hidden whitespace-nowrap px-2 font-mono text-xl font-bold text-gembl-red"
+      >
+        {credits === null ? "—" : `${credits.toLocaleString("cs-CZ")} G`}
+      </p>
+
+      <button
+        type="button"
+        style={rectStyle(layout.primaryCta)}
+        onClick={() => (loggedIn ? setShowTopUp(true) : setShowLogin(true))}
+        className="flex items-center justify-center bg-transparent font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
+      >
+        {loggedIn ? "Dobít kredit" : "Získat 1 000 G"}
+      </button>
+
+      <button
+        type="button"
+        disabled
+        style={rectStyle(layout.secondaryCta)}
+        className="flex cursor-not-allowed items-center justify-center bg-transparent font-serif text-xs font-bold uppercase tracking-wide text-gembl-muted"
+      >
+        Historie transakcí
+      </button>
+
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} callbackUrl="/casino" />}
+      {showTopUp && <TopUpModal onClose={() => setShowTopUp(false)} />}
+    </>
+  );
+}
