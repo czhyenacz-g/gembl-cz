@@ -19,6 +19,13 @@ const GAMES: Array<React.ComponentProps<typeof GameCard>> = [
     status: "active",
     href: "/automaty",
   },
+  {
+    emoji: "🥥",
+    title: "Skořápky",
+    description: "Tři kelímky, jedna kulička, nulová šance. Sleduj pozorně.",
+    status: "active",
+    href: "/skorapky",
+  },
   { emoji: "🎡", title: "Ruleta", description: "Červená, černá, nula. Brzy.", status: "soon" },
   { emoji: "🎫", title: "Stírací los", description: "Seškrábeš tři symboly. Výsledek stejný jako u automatů.", status: "soon" },
   { emoji: "🪙", title: "Krypto guru", description: "Investuj virtuální kredity do virtuálního ničeho.", status: "soon" },

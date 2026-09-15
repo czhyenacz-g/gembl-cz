@@ -21,3 +21,22 @@
 .animate-reel-spin {
   animation: reel-spin 0.15s linear infinite;
 }
+
+/* Skořápky shuffling — drobný shake (viz Cup.tsx), max pár px, žádné
+   výrazné přesouvání (viz zadání "kelímky se fyzicky nepřehazují"). */
+@keyframes shell-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+.animate-shell-shake {
+  animation: shell-shake 0.15s ease-in-out infinite;
+}
