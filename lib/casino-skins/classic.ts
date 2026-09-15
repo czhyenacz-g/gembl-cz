@@ -46,17 +46,22 @@ export const classicSkin: CasinoSkin = {
         { label: "Jak funguje", href: "/jak-to-funguje" },
       ],
       // Šířka 204 (dřív 200) dává trochu víc rezervy pro delší slova
-      // ("Žebříčky") — pravý okraj řádků v artworku je až ~x=384. "Online
-      // losy" je delší, ale při text-sm/bold se pohodlně vejde na jeden
-      // řádek stejně jako "Žebříčky", takže souřadnice zůstávají beze
-      // změny (viz zadání "uprav jen pokud je to potřeba").
+      // ("Žebříčky") — pravý okraj rámečků v artworku je až ~x=384.
+      //
+      // Y/výška řádků kopírují vytištěné rámečky (měřeno pixel-scanem
+      // artworku), NE spojité pásy — artwork má mezi rámečky malé mezery a
+      // jiný pitch, takže dřívější spojité pásy způsobovaly, že text u
+      // spodních položek „ujížděl“ nahoru (až o ~8 px). Text je uvnitř
+      // řádku centrovaný (`items-center`), takže střed řádku = střed
+      // vytištěného rámečku (200-242 / 249-284 / 293-328 / 336-371 /
+      // 380-416 / 425-463).
       rows: [
-        { x: 178, y: 199, width: 204, height: 42 },
-        { x: 178, y: 241, width: 204, height: 43 },
-        { x: 178, y: 284, width: 204, height: 43 },
-        { x: 178, y: 327, width: 204, height: 43 },
-        { x: 178, y: 370, width: 204, height: 44 },
-        { x: 178, y: 414, width: 204, height: 44 },
+        { x: 178, y: 200, width: 204, height: 42 },
+        { x: 178, y: 249, width: 204, height: 35 },
+        { x: 178, y: 293, width: 204, height: 35 },
+        { x: 178, y: 336, width: 204, height: 35 },
+        { x: 178, y: 380, width: 204, height: 36 },
+        { x: 178, y: 425, width: 204, height: 38 },
       ],
     },
 
