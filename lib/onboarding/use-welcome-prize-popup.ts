@@ -41,6 +41,15 @@ type WelcomePrizePopupState = {
  * jak desktop stage (ClassicCasinoStage), tak mobile fallback
  * (WelcomePrizeOnArrival), ať obě cesty jedou přesně stejnou logikou (viz
  * zadání "logika bonusu musí být stejná").
+ *
+ * PŘIHLÁŠENÝ uživatel (`loggedIn`) tenhle popup NIKDY automaticky
+ * nedostane — gate je na `loggedIn`, ne jen na `hasClaimedWelcomeBonus`
+ * (viz zadání "ani při refreshi, ani pokud zůstal starý pending prize").
+ * Přihlášením se totiž welcome bonus vždy uděluje rovnou při GET
+ * /api/auth/verify (viz app/api/auth/verify/route.ts), takže tenhle popup
+ * u přihlášeného účtu už nemá co nabízet — `loggedIn` gate to garantuje
+ * i pro edge-case, kdy by `hasClaimedWelcomeBonus` z nějakého důvodu
+ * (např. ještě neproběhlý refetch session) zaostávalo za realitou.
  */
 export function useWelcomePrizePopup(): WelcomePrizePopupState {
   const { session } = useSession();
@@ -48,7 +57,6 @@ export function useWelcomePrizePopup(): WelcomePrizePopupState {
   const [dismissed, setDismissed] = useState(false);
 
   const loggedIn = session.status === "authenticated";
-  const alreadyClaimed = session.status === "authenticated" && session.hasClaimedWelcomeBonus;
 
   useEffect(() => {
     setDismissed(readDismissed());
@@ -56,7 +64,7 @@ export function useWelcomePrizePopup(): WelcomePrizePopupState {
 
   useEffect(() => {
     if (session.status === "loading") return;
-    if (alreadyClaimed) return;
+    if (loggedIn) return;
     if (dismissed) return;
 
     let cancelled = false;
@@ -73,12 +81,16 @@ export function useWelcomePrizePopup(): WelcomePrizePopupState {
     return () => {
       cancelled = true;
     };
-  }, [session.status, alreadyClaimed, dismissed]);
+  }, [session.status, loggedIn, dismissed]);
 
   function dismiss() {
     writeDismissed();
     setDismissed(true);
   }
 
-  return { amountG: alreadyClaimed || dismissed ? null : amountG, loggedIn, dismiss };
+  // `loggedIn` v návratu vynuceně vrátí `amountG: null` bez ohledu na to,
+  // co je v `amountG` state — i kdyby se hráč přihlásil PROTI BĚHU
+  // popupu (stejná tab session), na dalším renderu se popup okamžitě
+  // schová (viz zadání "ani při refreshi").
+  return { amountG: loggedIn || dismissed ? null : amountG, loggedIn, dismiss };
 }

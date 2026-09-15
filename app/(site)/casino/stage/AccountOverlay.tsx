@@ -17,8 +17,7 @@ import { rectStyle } from "../../../../lib/casino-skins/rect-style.ts";
 // (jediné místo, které smí ve stage variantě rozhodnout, jaký modal je
 // otevřený — viz zadání "jeden zdroj pravdy", "AccountOverlay nemá
 // implementovat vlastní paralelní modal logiku"). Jinak by mohl vzniknout
-// druhý modal nad/pod tím, co si nezávisle otevře SlotMachine embedded
-// credit gate.
+// druhý modal nad/pod tím, který si nezávisle otevře jiná část stage.
 export default function AccountOverlay({
   layout,
   onRequestLogin,

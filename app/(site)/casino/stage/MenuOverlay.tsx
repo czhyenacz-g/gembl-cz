@@ -16,10 +16,10 @@ import { rectStyle } from "../../../../lib/casino-skins/rect-style.ts";
 // aktivní rodičovskou položku (viz isActiveHref, prefix match).
 //
 // `pathname === "/casino"` je speciální případ: stage sama žije jen na
-// /casino (viz app/(site)/casino/page.tsx), které je koncepčně živý stůl
-// Automatů (SlotMachine je přímo tady embedded) — bez tyhle výjimky by
-// při pohledu na stage nebyla aktivní žádná položka, protože žádný href
-// doslova neodpovídá "/casino".
+// /casino (viz app/(site)/casino/page.tsx), které je koncepčně vstupní
+// brána k Automatům — hra samotná je až na /automaty (viz SlotTeaser.tsx)
+// — bez tyhle výjimky by při pohledu na stage nebyla aktivní žádná
+// položka, protože žádný href doslova neodpovídá "/casino".
 function isActiveHref(pathname: string, href: string): boolean {
   if (pathname === href || pathname.startsWith(`${href}/`)) return true;
   return pathname === "/casino" && href === "/automaty";

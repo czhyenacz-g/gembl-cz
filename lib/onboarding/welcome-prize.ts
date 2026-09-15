@@ -2,15 +2,22 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 // "Vyhrál jsi X G zdarma" onboarding popup (viz app/(site)/casino/stage/
-// WelcomePrizeOverlay a zadání) — základní částka je náhodná, 200-800 G po
-// 100, vylosovaná JEDNOU na návštěvníka a uložená v podepsané (HMAC-SHA256)
-// cookie, stejný vzor jako lib/auth/session.ts (payload.exp.signature).
-// Na rozdíl od session cookie NENÍ httpOnly-only důvod k odlišení: obsahuje
-// stejně netriviální payload, ale prefix "wp1." v podepisovaném řetězci
-// (viz sign()) cookie doménově odděluje od session cookie, aby jedna
-// nemohla být omylem/útokem zaměněná za druhou, i kdyby obě používaly
-// stejný SESSION_SECRET.
-export const WELCOME_PRIZE_AMOUNTS_G = [200, 300, 400, 500, 600, 700, 800] as const;
+// WelcomePrizeOverlay a zadání) — základní částka je náhodná, 100-400 G po
+// 100 (jediné místo, kde je tenhle rozsah definovaný — viz zadání
+// "nevkládej čísla po komponentách"), vylosovaná JEDNOU na návštěvníka a
+// uložená v podepsané (HMAC-SHA256) cookie, stejný vzor jako
+// lib/auth/session.ts (payload.exp.signature). Na rozdíl od session
+// cookie NENÍ httpOnly-only důvod k odlišení: obsahuje stejně netriviální
+// payload, ale prefix "wp1." v podepisovaném řetězci (viz sign()) cookie
+// doménově odděluje od session cookie, aby jedna nemohla být omylem/
+// útokem zaměněná za druhou, i kdyby obě používaly stejný SESSION_SECRET.
+//
+// Snížení z dřívějšího rozsahu 200-800 G — `verifyPendingPrizeCookieValue`
+// níž ověřuje i platně podepsanou cookie proti TÉHLE množině, takže starší
+// (500-800 G) pending cookie z předchozí verze automaticky přestane
+// procházet (vrátí se `null`) a `resolveBaseAmountG` pak vylosuje novou
+// platnou hodnotu — žádná ruční migrace/sanitizace navíc není potřeba.
+export const WELCOME_PRIZE_AMOUNTS_G = [100, 200, 300, 400] as const;
 export type WelcomePrizeAmount = (typeof WELCOME_PRIZE_AMOUNTS_G)[number];
 
 // Přihlášením/registrací (viz zadání "2x navýšení, nekomunikovat natvrdo")

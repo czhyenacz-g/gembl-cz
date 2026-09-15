@@ -1,41 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import LoginModal from "../../../components/auth/LoginModal.tsx";
-import CreditGateModal from "../../../components/wallet/CreditGateModal.tsx";
 import TopUpModal from "../../../components/wallet/TopUpModal.tsx";
 import WelcomePrizeModal from "../../../components/wallet/WelcomePrizeModal.tsx";
 import { useSession } from "../../../../lib/auth/use-session-client.ts";
 import type { CasinoSkin } from "../../../../lib/casino-skins/index.ts";
 import { rectStyle } from "../../../../lib/casino-skins/rect-style.ts";
 import { useWelcomePrizePopup } from "../../../../lib/onboarding/use-welcome-prize-popup.ts";
-import SlotMachine from "../../automaty/SlotMachine.tsx";
 import AccountOverlay from "./AccountOverlay.tsx";
 import CasinoStage from "./CasinoStage.tsx";
 import MenuOverlay from "./MenuOverlay.tsx";
+import SlotTeaser from "./SlotTeaser.tsx";
 import StatsOverlay from "./StatsOverlay.tsx";
 
 // Jeden sdílený "jaký wallet modal je otevřený" stav pro celou stage —
-// AccountOverlay (ruční CTA), SlotMachine embedded (automatický
-// credit-gate při příchodu s 0 G / po doprotočení kreditu) a welcome-prize
-// popup (viz useWelcomePrizePopup) do něj jen zapisují přes callbacky,
-// nikdy si nedrží vlastní paralelní modal stav (viz zadání "jeden zdroj
-// pravdy"). Díky tomu je vždy v DOM nejvýš jeden <LoginModal>/<TopUpModal>/
-// <CreditGateModal>/<WelcomePrizeModal>.
-//
-// Priorita: welcome-prize popup se otevírá jen do prázdna (`current.kind
-// === "none"`, viz efekt níž) a auto credit-gate ho nesmí přebít (viz
-// handleCreditGateChange) — nový návštěvník s nízkým kreditem tak nejdřív
-// uvidí "vyhrál jsi", ne rovnou "dojel ti kredit". Ruční CTA kliky
-// (login/topup z AccountOverlay) naopak přebít SMÍ, protože k nim může
-// dojít, jen když už žádný jiný modal neblokuje backdrop.
-type StageModal =
-  | { kind: "none" }
-  | { kind: "login" }
-  | { kind: "topup" }
-  | { kind: "credit-gate" }
-  | { kind: "welcome"; amountG: number };
+// AccountOverlay (ruční CTA) a welcome-prize popup (viz
+// useWelcomePrizePopup) do něj jen zapisují přes callbacky, nikdy si
+// nedrží vlastní paralelní modal stav (viz zadání "jeden zdroj pravdy").
+// Díky tomu je vždy v DOM nejvýš jeden <LoginModal>/<TopUpModal>/
+// <WelcomePrizeModal>. Žádný credit-gate tady — automat na /casino je jen
+// vizuální teaser (viz SlotTeaser.tsx), nespíná se, takže tu není žádné
+// "kolo", při kterém by mohl dojít kredit; skutečný credit-gate zůstává
+// jen v SlotMachine.tsx na /automaty.
+type StageModal = { kind: "none" } | { kind: "login" } | { kind: "topup" } | { kind: "welcome"; amountG: number };
 
 // Skládá celý "classic" skin dohromady: background canvas (CasinoStage) +
 // živé HTML overlaye napozicované podle skin.layout. Žádná herní/wallet/
@@ -59,19 +48,6 @@ export default function ClassicCasinoStage({
   function closeModal() {
     setModal({ kind: "none" });
   }
-
-  // Stabilní identita (useCallback, prázdné deps — `setModal` je useState
-  // setter, vždy stabilní): SlotMachine tenhle callback dává do deps pole
-  // svého auto-trigger efektu (viz SlotMachine.tsx), takže musí mít napříč
-  // rendery stejnou referenci, jinak by se efekt zbytečně přeregistrovával
-  // při každém otevření/zavření libovolného modalu na stage. Nikdy
-  // nepřebije welcome-prize popup (viz komentář u StageModal výš).
-  const handleCreditGateChange = useCallback((open: boolean) => {
-    setModal((current) => {
-      if (open) return current.kind === "welcome" ? current : { kind: "credit-gate" };
-      return current.kind === "credit-gate" ? { kind: "none" } : current;
-    });
-  }, []);
 
   // Otevře welcome-prize popup, jakmile je částka známá — ale jen do
   // prázdna (nepřebije modal, který si právě otevřel/drží uživatel).
@@ -106,18 +82,13 @@ export default function ClassicCasinoStage({
           onRequestTopUp={() => setModal({ kind: "topup" })}
         />
         <StatsOverlay layout={skin.layout.stats} />
-        <SlotMachine
-          embedded
-          layout={skin.layout.slot}
-          creditGate={{ open: modal.kind === "credit-gate", onOpenChange: handleCreditGateChange }}
-        />
+        <SlotTeaser layout={skin.layout.slot} />
       </CasinoStage>
 
       {promotionSlot && <div className="mt-8">{promotionSlot}</div>}
 
       {modal.kind === "login" && <LoginModal onClose={closeModal} callbackUrl="/casino" />}
       {modal.kind === "topup" && <TopUpModal onClose={closeModal} />}
-      {modal.kind === "credit-gate" && <CreditGateModal loggedIn={loggedIn} onClose={closeModal} callbackUrl="/casino" />}
       {modal.kind === "welcome" && (
         <WelcomePrizeModal
           amountG={modal.amountG}

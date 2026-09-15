@@ -13,7 +13,7 @@ describe("buildMagicLinkEmailContent", () => {
   });
 
   test("odkaz na přihlášení je vždy v textu, i s výhrou", () => {
-    const { text } = buildMagicLinkEmailContent({ loginUrl: "https://gembl.cz/api/auth/verify?token=xyz", welcomePrizeG: 500 });
+    const { text } = buildMagicLinkEmailContent({ loginUrl: "https://gembl.cz/api/auth/verify?token=xyz", welcomePrizeG: 300 });
     assert.match(text, /https:\/\/gembl\.cz\/api\/auth\/verify\?token=xyz/);
   });
 
@@ -27,9 +27,9 @@ describe("buildMagicLinkEmailContent", () => {
   });
 
   test("dvě různé částky dají viditelně jiný text (žádná zapomenutá natvrdo napsaná hodnota)", () => {
-    const a = buildMagicLinkEmailContent({ loginUrl: "https://gembl.cz/x", welcomePrizeG: 200 });
-    const b = buildMagicLinkEmailContent({ loginUrl: "https://gembl.cz/x", welcomePrizeG: 800 });
+    const a = buildMagicLinkEmailContent({ loginUrl: "https://gembl.cz/x", welcomePrizeG: 100 });
+    const b = buildMagicLinkEmailContent({ loginUrl: "https://gembl.cz/x", welcomePrizeG: 400 });
     assert.notEqual(a.subject, b.subject);
-    assert.match(b.subject, /800 G/);
+    assert.match(b.subject, /400 G/);
   });
 });
