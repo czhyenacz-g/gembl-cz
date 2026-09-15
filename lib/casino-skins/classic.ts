@@ -42,13 +42,14 @@ export const classicSkin: CasinoSkin = {
     },
 
     // Pixel-tuning pass (viz commit): avatar/name/balance přeměřené přímo
-    // z artworku (čtvercový rámeček je 70×72 na x:1142/y:220, ne 90×55 na
-    // x:1165/y:178 jak bylo původně odhadnuto) — name/balance posunuté
-    // pod něj, aby s ním nekolidovaly.
+    // z artworku (čtvercový rámeček je 70×72, ne 90×55 na x:1165/y:178
+    // jak bylo původně odhadnuto). Y následně posunuto o +20 (vizuální
+    // zpětná vazba: blok s avatarem seděl opticky moc vysoko) —
+    // name/balance posunuté pod něj se stejnými rozestupy.
     account: {
-      avatar: { x: 1142, y: 220, width: 70, height: 72 },
-      name: { x: 1075, y: 300, width: 200, height: 24 },
-      balance: { x: 1075, y: 330, width: 200, height: 38 },
+      avatar: { x: 1142, y: 240, width: 70, height: 72 },
+      name: { x: 1075, y: 320, width: 200, height: 22 },
+      balance: { x: 1075, y: 346, width: 200, height: 36 },
       primaryCta: { x: 1081, y: 393, width: 188, height: 44 },
       secondaryCta: { x: 1069, y: 446, width: 212, height: 42 },
     },
