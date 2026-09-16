@@ -124,11 +124,14 @@ describe("anti-race / double click", () => {
 });
 
 describe("SFX", () => {
-  test("napojené eventy: spin_start (HRÁT), ui_click (výběr), spin_stop (reveal), lose (prohra)", () => {
-    assert.match(source, /playSfx\("spin_start"\)/);
+  test("napojené eventy: ui_click (HRÁT i výběr kelímku), shell_shuffle (míchání), spin_stop (reveal), lose (prohra)", () => {
+    // Kelímky nejsou automat — hrají mechanické dřevo (shell_shuffle) a klik,
+    // ne páku automatu (spin_start), viz zadání.
     assert.match(source, /playSfx\("ui_click"\)/);
+    assert.match(source, /playSfx\("shell_shuffle"\)/);
     assert.match(source, /playSfx\("spin_stop"\)/);
     assert.match(source, /playSfx\("lose"\)/);
+    assert.doesNotMatch(source, /playSfx\("spin_start"\)/);
   });
 });
 

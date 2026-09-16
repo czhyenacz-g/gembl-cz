@@ -126,6 +126,8 @@ export default function ShellGame() {
 
   function startShuffling() {
     setPhase("shuffling");
+    // Mechanické posuny kelímků (dřevo) — ne elektronický woosh.
+    playSfx("shell_shuffle");
     const stepCount = SHUFFLE_MIN_STEPS + Math.floor(Math.random() * (SHUFFLE_MAX_STEPS - SHUFFLE_MIN_STEPS + 1));
     runShuffleStep(generateShuffleSequence(stepCount), 0);
   }
@@ -195,7 +197,7 @@ export default function ShellGame() {
     }
     placingBetRef.current = true;
     setPlacingBet(true);
-    playSfx("spin_start");
+    playSfx("ui_click");
     void placeBetAndStart();
   }
 

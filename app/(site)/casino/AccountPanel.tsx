@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import LoginModal from "../../components/auth/LoginModal";
+import { useAudio } from "../../../lib/audio/AudioProvider.tsx";
 import TopUpModal from "../../components/wallet/TopUpModal";
 import { useSession } from "../../../lib/auth/use-session-client";
 import { loadPlayerState, subscribePlayerState } from "../../../lib/casino/storage";
@@ -11,6 +12,7 @@ import { loadPlayerState, subscribePlayerState } from "../../../lib/casino/stora
 // BalanceBadge v headeru.
 export default function AccountPanel() {
   const { session } = useSession();
+  const { playSfx } = useAudio();
   const localCredits = useSyncExternalStore(
     subscribePlayerState,
     () => loadPlayerState().credits,
@@ -49,11 +51,25 @@ export default function AccountPanel() {
 
         <div className="mt-5 flex w-full flex-col gap-2">
           {loggedIn ? (
-            <button type="button" className="gembl-cta w-full" onClick={() => setShowTopUp(true)}>
+            <button
+              type="button"
+              className="gembl-cta w-full"
+              onClick={() => {
+                playSfx("ui_click");
+                setShowTopUp(true);
+              }}
+            >
               Dobít kredit
             </button>
           ) : (
-            <button type="button" className="gembl-cta w-full" onClick={() => setShowLogin(true)}>
+            <button
+              type="button"
+              className="gembl-cta w-full"
+              onClick={() => {
+                playSfx("ui_click");
+                setShowLogin(true);
+              }}
+            >
               Získat až 800 G
             </button>
           )}

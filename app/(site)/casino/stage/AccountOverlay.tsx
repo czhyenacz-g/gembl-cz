@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { useAudio } from "../../../../lib/audio/AudioProvider.tsx";
 import { useSession } from "../../../../lib/auth/use-session-client.ts";
 import { loadPlayerState, subscribePlayerState } from "../../../../lib/casino/storage.ts";
 import type { CasinoSkin } from "../../../../lib/casino-skins/index.ts";
@@ -28,6 +29,7 @@ export default function AccountOverlay({
   onRequestTopUp: () => void;
 }) {
   const { session } = useSession();
+  const { playSfx } = useAudio();
   const localCredits = useSyncExternalStore(
     subscribePlayerState,
     () => loadPlayerState().credits,
@@ -66,7 +68,11 @@ export default function AccountOverlay({
       <button
         type="button"
         style={rectStyle(layout.primaryCta)}
-        onClick={() => (loggedIn ? onRequestTopUp() : onRequestLogin())}
+        onClick={() => {
+          playSfx("ui_click");
+          if (loggedIn) onRequestTopUp();
+          else onRequestLogin();
+        }}
         className="flex items-center justify-center bg-transparent font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
       >
         {loggedIn ? "Dobít kredit" : "Získat až 800 G"}

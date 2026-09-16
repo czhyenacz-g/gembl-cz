@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAudio } from "../../../lib/audio/AudioProvider.tsx";
 import { CREDIT_PACKAGES } from "../../../lib/wallet/packages";
 import ModalShell from "../ModalShell";
 
 export default function TopUpModal({ onClose, leadText }: { onClose: () => void; leadText?: string }) {
+  const { playSfx } = useAudio();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Pokladní zásuvka při otevření dobití (viz zadání) — čistě prezentační,
+  // na Stripe flow nemá žádný vliv. `playSfx` má stabilní identitu.
+  useEffect(() => {
+    playSfx("topup_open");
+  }, [playSfx]);
 
   async function handleBuy(packageId: string) {
     if (loadingId) return;

@@ -1,123 +1,180 @@
-# Audio assety — /casino
+# Audio assety — /casino, hry a obsahové stránky
 
-Tenhle dokument eviduje licence audio souborů použitých v casino
-experience (hudba na pozadí + SFX, viz `lib/audio/`). Cíl: do projektu se
-nikdy nedostane audio s nejasnou nebo neověřenou licencí.
+Tenhle dokument eviduje licences audio souborů použitých v GEMBL.cz (hudba
+na pozadí + SFX, viz `lib/audio/`). Cíl: do projektu se nikdy nedostane
+audio s nejasnou nebo neověřenou licencí.
 
 Architektura je popsaná v `lib/audio/AudioProvider.tsx` (jediný centrální
-audio manager, `useAudio()` hook). Registry jsou v `lib/audio/tracks.ts`
-(hudba) a `lib/audio/sfx.ts` (efekty). Hudební playlist (`lib/audio/tracks.ts`)
-má od teď 2 REÁLNÉ produkční tracky (`placeholder: false`, viz "Evidence
-tracků" níž) — jejich **licence ale zatím není potvrzená**, viz sloupec
-"Stav licence". SFX registry (`lib/audio/sfx.ts`) zůstává zatím čistě
-**placeholder** (`placeholder: true`), protože v repu nejsou žádné reálné
-SFX soubory.
+audio manager, `useAudio()` hook, mountnutý jednou v `app/(site)/layout.tsx`).
+Playlist se určuje z aktuální route (`lib/audio/route-playlist.ts`), takže
+přechod mezi herní a obsahovou stránkou hudbu přefaduje (fade-out → fade-in).
+Registry: `lib/audio/tracks.ts` (hudba, per playlist) a `lib/audio/sfx.ts`
+(efekty).
+
+## Playlisty
+
+| Playlist | Kde hraje | Charakter |
+|---|---|---|
+| `casino` | `/casino`, `/automaty`, `/skorapky`, `/losy` | energičtější 1930s swing „pod hrou“ |
+| `universal` | `/profil`, `/zebricky`, `/jak-to-funguje` | pomalejší lounge/cabaret jako tichá kulisa |
+
+Route, která v `route-playlist.ts` není (např. `/reset`), hraje ticho — to je
+záměr, ne opomenutí.
 
 ## Jak přidat reálný soubor
 
-### Hudba (background playlist)
+### Hudba
 
-1. Ulož MP3 do `public/audio/music/<soubor>.mp3` (viz `public/audio/music/README.md`).
-2. V `lib/audio/tracks.ts` najdi odpovídající záznam (nebo přidej nový) a doplň:
-   - `title` — skutečný název skladby
-   - `author` — autor/interpret přesně tak, jak to licence vyžaduje
-   - `source` — odkud skladba pochází (knihovna/archiv/URL)
-   - `license` — přesný název licence (např. `CC BY 4.0`, `CC0`, `Public Domain`)
-   - `attributionRequired` — `true`/`false` podle licence
-3. Nastav `placeholder: false`.
-4. Doplň řádek do tabulky "Evidence tracků" níž.
+1. Ulož MP3 do `public/audio/music/<soubor>.mp3`.
+2. V `lib/audio/tracks.ts` přidej záznam do příslušného playlistu a doplň
+   `title` / `author` / `source` / `license` / `attributionRequired`.
+3. Nastav `placeholder: false` a doplň řádek do tabulky níž.
+
+Konverze pro web (stejná pipeline pro všechny tracky):
+
+```
+ffmpeg -i <originál> -af loudnorm=I=-18:TP=-1.5:LRA=11 -ar 48000 -ac 2 \
+  -c:a libmp3lame -b:a 128k public/audio/music/<výstup>.mp3
+```
 
 ### SFX
 
-1. Ulož MP3 do `public/audio/sfx/<soubor>.mp3` (viz `public/audio/sfx/README.md`).
-2. V `lib/audio/sfx.ts` uprav `src` na skutečnou cestu a nastav `placeholder: false`.
-3. Krátké, jemné zvuky — žádné hlasité/agresivní efekty (viz zadání).
+1. Ulož krátké MP3 do `public/audio/sfx/<soubor>.mp3`.
+2. V `lib/audio/sfx.ts` přidej/uprav záznam (`src`) a nastav
+   `placeholder: false`.
 
-## Styl hudby (pro výběr/skladbu tracků)
+Konverze pro web (mono, peak-normalizace; `loudnorm` je u souborů pod 3 s
+nespolehlivý, proto se normalizuje na špičku):
 
-Original / royalty-free, ve stylu: 1930s hot jazz, early swing, ragtime,
-vaudeville/cabaret, vintage cartoon casino vibe. **Nikdy nekopírovat**
-konkrétní soundtracky nebo melodie z existujících her/značek.
+```
+ffmpeg -i <zdroj> -af "volume=<gain>dB" -ac 1 -ar 48000 \
+  -c:a libmp3lame -b:a 128k public/audio/sfx/<výstup>.mp3
+```
 
-## Evidence tracků
+Chybějící soubor nic nerozbije — `AudioProvider.playSfx()` má `try/catch`
+i `.catch()` na `el.play()`, takže se jen tiše nic nepřehraje (žádný pád
+hry, žádný dopad na wallet/spin logiku).
 
-Oba soubory nahrál ručně uživatel do `temp/audio/` (mimo git, zdrojové
-originály tam zůstávají jako záloha) a byly převedené pro web (viz
-"Převod" níž). Původní název souboru odpovídá typickému exportu z
-Pixabay (`<autor>-<název>-<pixabay-id>.mp3`), ale **licenční text nebyl
-ověřen** — `author` níž je jen to, co je čitelné z názvu souboru, ne
-potvrzená licenční informace.
+## Styl
+
+Original / royalty-free 1930s hot jazz, early swing, ragtime, vaudeville a
+**mechanické retro kasino zvuky** (dřevo, kov, žetony, karty, papír).
+**Nikdy**: synth/arcade beepy, digitální jackpoty, futuristické UI zvuky a
+konkrétní melodie z existujících her/značek.
+
+---
+
+## Casino music (playlist `casino`)
 
 | Track (id) | Titul | Autor (z názvu souboru) | Zdroj | Stav licence | Soubor | Duration | Bitrate | Sample rate |
 |---|---|---|---|---|---|---|---|---|
 | `retro-casino-01` | The Foot Tappers Club | Kaazoom | user-provided | ⚠️ **LICENSE NEEDS MANUAL VERIFICATION** | `public/audio/music/retro-casino-01.mp3` | 2:30 (149.9 s) | 128 kbps MP3 | 48 kHz stereo |
 | `retro-casino-02` | Late Night Big Band Swing | NickPanek | user-provided | ⚠️ **LICENSE NEEDS MANUAL VERIFICATION** | `public/audio/music/retro-casino-02.mp3` | 1:33 (92.9 s) | 128 kbps MP3 | 48 kHz stereo |
 
-**Originální (zdrojové) soubory** — zatím ponechané v `temp/audio/` (negitované, mimo `public/`), pro referenci/re-konverzi:
+## Universal / lounge music (playlist `universal`)
+
+Nové tracky pro obsahové stránky (Profil / Žebříčky / Jak to funguje).
+Zdrojové soubory nahrál ručně uživatel do `temp/audio/`, převedené stejnou
+pipeline jako casino tracky (128 kbps, 48 kHz stereo, normalizace na
+-18 LUFS integrated / -1.5 dBTP).
+
+| Track (id) | Titul | Autor (z názvu souboru) | Zdroj | Stav licence | Soubor | Duration | Bitrate | Sample rate |
+|---|---|---|---|---|---|---|---|---|
+| `universal-lounge-01` | Swing Jazz Coffee Shop | Alex Morgan | user-provided | ⚠️ **LICENSE NEEDS MANUAL VERIFICATION** | `public/audio/music/universal-lounge-01.mp3` | 2:22 (142.1 s) | 128 kbps MP3 | 48 kHz stereo |
+| `universal-lounge-02` | Swing Baby Swing (1930s Swing) | Kaazoom | user-provided | ⚠️ **LICENSE NEEDS MANUAL VERIFICATION** | `public/audio/music/universal-lounge-02.mp3` | 1:59 (118.9 s) | 128 kbps MP3 | 48 kHz stereo |
+
+Měření po normalizaci (žádný clipping, hlasitosti sladěné s casino tracky,
+takže přechod mezi playlisty neudělá skok): `universal-lounge-01` mean
+−20.2 dB / peak −7.6 dB, `universal-lounge-02` mean −19.9 dB / peak −8.2 dB
+(casino tracky: −20.4 / −6.4 a −20.5 / −2.8).
+
+### Originální (zdrojové) soubory v `temp/audio/` (negitované)
 
 | Originál | Duration | Bitrate | Sample rate | Velikost |
 |---|---|---|---|---|
 | `kaazoom-the-foot-tappers-club-1930s-upbeat-swing-music-482680.mp3` | 2:30 (149.9 s) | 256 kbps MP3 CBR | 48 kHz stereo | 4.58 MB |
 | `nickpanek-late-night-big-band-swing-jazz-instrumental-236168.mp3` | 1:33 (92.9 s) | 256 kbps MP3 CBR | 48 kHz stereo | 2.83 MB |
+| `alex-morgan-swing-jazz-coffee-shop-568165.mp3` | 2:22 (142.0 s) | 256 kbps MP3 CBR | 48 kHz stereo | 4.34 MB |
+| `kaazoom-swing-baby-swing-1930s-upbeat-swing-music-482670.mp3` | 1:59 (118.9 s) | 256 kbps MP3 CBR | 48 kHz stereo | 3.63 MB |
 
-**Převod pro web** (viz zadání "MP3, stereo, 44.1/48 kHz, ~128–160 kbps,
-loudness normalizace"): `ffmpeg -i <original> -af loudnorm=I=-18:TP=-1.5:LRA=11
--ar 48000 -ac 2 -c:a libmp3lame -b:a 128k <output>` — jednoprůchodová EBU
-R128 normalizace na -18 LUFS integrated / -1.5 dBTP true peak (bezpečná
-rezerva proti clippingu), 128 kbps (spodní hranice zadaného rozsahu, hudba
-je jen tichá kulisa), sample rate ponechaný na 48 kHz ze zdroje (žádný
-zbytečný resample). Výsledek: `retro-casino-01.mp3` 2.29 MB (mean −20.4 dB,
-peak −6.4 dB, bez clippingu), `retro-casino-02.mp3` 1.42 MB (mean −20.5 dB,
-peak −2.8 dB, bez clippingu) — oba zdroje měly PŘED normalizací výrazně
-odlišnou hlasitost (mean −10.8 dB vs. −17.2 dB), po loudnorm jsou
-vyrovnané, takže přechod mezi nimi v playlistu nepůsobí jako skok hlasitosti.
+⚠️ **LICENSE NEEDS MANUAL VERIFICATION** — `author` je jen to, co je čitelné
+z názvu souboru (typický formát exportu z Pixabay:
+`<autor>-<název>-<pixabay-id>.mp3`), licenční text nebyl ověřen. V
+`tracks.ts` proto zůstává `source: "user-provided"` /
+`license: "unknown / verify manually"`.
 
-⚠️ **LICENSE NEEDS MANUAL VERIFICATION** — dokud se u obou tracků ručně
-nedohledá a nepotvrdí přesný licenční text (pravděpodobně Pixabay Content
-License podle formátu názvu souboru, ale nebylo ověřeno), platí `source:
-"user-provided"` / `license: "unknown / verify manually"` v `tracks.ts`.
-Než se to potvrdí, nepoužívat tyto tracky mimo tenhle interní branch bez
-vědomí, že licence je neověřená.
+---
 
-## Evidence SFX
+## SFX
 
-| SFX id | Popis | Soubor | Stav |
-|---|---|---|---|
-| `ui_click` | Obecný UI klik | `public/audio/sfx/ui-click.mp3` | placeholder — registrováno, zatím nikde nevoláno |
-| `spin_start` | Klik na "VSADIT" / start otočení | `public/audio/sfx/spin-start.mp3` | placeholder — soubor chybí (wired v SlotMachine.tsx) |
-| `reel_tick` | Cvaknutí válce během animace | `public/audio/sfx/reel-tick.mp3` | placeholder — registrováno, zatím záměrně nevoláno (viz zadání "pokud by to bylo příliš hlučné, raději jen spin_start + spin_stop") |
-| `spin_stop` | Zastavení válců | `public/audio/sfx/spin-stop.mp3` | placeholder — soubor chybí (wired v SlotMachine.tsx) |
-| `near_miss` | Výsledek s částečnou shodou (nebo jackpot flash — výhra je v této hře vždy 0 G) | `public/audio/sfx/near-miss.mp3` | placeholder — soubor chybí (wired v SlotMachine.tsx) |
-| `lose` | Výsledek bez jakékoli shody | `public/audio/sfx/lose.mp3` | placeholder — soubor chybí (wired v SlotMachine.tsx) |
-| `credit_added` | Kredit připsán (claim welcome bonusu) | `public/audio/sfx/credit-added.mp3` | placeholder — soubor chybí (wired v WelcomePrizeModal.tsx) |
-| `popup_open` | Otevření welcome-prize popupu | `public/audio/sfx/popup-open.mp3` | placeholder — soubor chybí (wired v WelcomePrizeModal.tsx) |
-| `devil_laugh` | Později (viz zadání) | `public/audio/sfx/devil-laugh.mp3` | placeholder — registrováno, zatím nikde nevoláno |
-| `topup_open` | Otevření dobití kreditu | `public/audio/sfx/topup-open.mp3` | placeholder — registrováno, zatím nikde nevoláno (TopUpModal je wallet/Stripe flow, viz "co neměnit") |
+Všechny SFX níž **vygeneroval in-house** tento projekt přímo z ffmpeg
+syntézy (šumové impulsy + filtrace + obálky — dřevo, kov, žetony, papír).
+Nejsou to stažené vzorky, takže **žádná třetí strana a žádné licenční
+riziko**; projekt je vlastní. Nejsou to ale audiofilní nahrávky — pokud bude
+chtít uživatel realističtější, stačí soubor na stejné cestě nahradit
+(délka/charakter by měly zůstat podobné, viz tabulka).
 
-## Kandidátní zdroje (nestaženo, jen k prověření)
+Formát: mono MP3 128 kbps, 48 kHz, peak-normalizované na **-3 dBFS**.
+Jediná výjimka je `near_miss`: je to tónový sting (ne perkuse), takže byl
+záměrně stažen o 4 dB (peak **-7.4 dBFS**) — s peak-normalizací by působil
+řádově hlasitěji než ostatní efekty a přehlušoval hudbu.
 
-Žádný z těchto zdrojů nebyl stažen ani použit — je to jen výchozí bod pro
-ruční hledání, **licenci vždy ověř u konkrétní skladby/souboru přímo u
-zdroje** před stažením:
+| SFX id | Popis | Soubor | Duration | Velikost | Placeholder |
+|---|---|---|---|---|---|
+| `ui_click` | Dřevěné kliknutí tlačítka | `public/audio/sfx/ui-click.mp3` | 120 ms | 2.3 kB | false |
+| `spin_start` | Zatažení páky (ráčna + kovový clack) | `public/audio/sfx/spin-start.mp3` | 480 ms | 8.1 kB | false |
+| `reel_tick` | Cvaknutí válce (jemné) | `public/audio/sfx/reel-tick.mp3` | 96 ms | 2.0 kB | false |
+| `spin_stop` | Těžší klak při zastavení válců | `public/audio/sfx/spin-stop.mp3` | 264 ms | 4.7 kB | false |
+| `near_miss` | Cartoon „wah-wah“ pád (stažen o 4 dB, viz výš) | `public/audio/sfx/near-miss.mp3` | 888 ms | 14.6 kB | false |
+| `lose` | Suché položení žetonu | `public/audio/sfx/lose.mp3` | 216 ms | 3.9 kB | false |
+| `credit_added` | Hrst žetonů na stůl | `public/audio/sfx/credit-added.mp3` | 744 ms | 12.3 kB | false |
+| `popup_open` | Opona/karta + krátký sting | `public/audio/sfx/popup-open.mp3` | 648 ms | 10.8 kB | false |
+| `topup_open` | Pokladní zásuvka | `public/audio/sfx/topup-open.mp3` | 432 ms | 7.3 kB | false |
+| `shell_shuffle` | Dřevěné posuny kelímků | `public/audio/sfx/shell-shuffle.mp3` | 528 ms | 8.9 kB | false |
+| `scratch` | Papír/mince při stírání losu | `public/audio/sfx/scratch.mp3` | 456 ms | 7.7 kB | false |
+| `devil_laugh` | Ďábelský smích (později) | — (soubor záměrně není) | — | — | **true** |
 
-- **Library of Congress — National Jukebox** (`citizen-dj.labs.loc.gov/loc-jukebox-jazz`) —
-  historické jazz/ragtime nahrávky, řada z nich Public Domain, ale ověřit
-  status u každé nahrávky zvlášť (ne všechno v archivu je automaticky PD).
-- **Public Domain Review — Jazz, Ragtime & Blues** (`publicdomainreview.org/collections/all/genre/jazz-ragtime-and-blues`) —
-  kurátorovaná kolekce s odkazy na PD zdroje.
-- **Internet Archive** (`archive.org`) — obrovská knihovna starých jazz
-  nahrávek, ale licence se liší položku od položky — ověřit vždy u
-  konkrétního uploadu.
-- **Kevin MacLeod / incompetech.com** — celý katalog pod CC BY (vyžaduje
-  attribution), obsahuje i ragtime/swing styl skladby — vhodné pro
-  cartoon casino vibe, ale nutná attribution.
-- **Pixabay Music** (`pixabay.com/music`) — royalty-free, vlastní licenční
-  podmínky Pixabay (ne CC) — přečíst si aktuální licenční text před použitím.
+## Kde se které SFX hraje
+
+| Event | SFX | Kde |
+|---|---|---|
+| Klik na VSADIT (automaty) | `ui_click` + `spin_start` | `SlotMachine.tsx` (handleSpin) |
+| ± sázka (automaty) | `ui_click` | `SlotMachine.tsx` (tlačítka −/+) |
+| Během točení válců | `reel_tick` (max ~5× za spin) | `SlotMachine.tsx` (efekt na `spinning`) |
+| Zastavení válců | `spin_stop` | `SlotMachine.tsx` (finishSpinAnimation) |
+| Výsledek „těsně vedle“ | `near_miss` | `SlotMachine.tsx` (classifySpinResult) |
+| Běžná prohra | `lose` | `SlotMachine.tsx` (classifySpinResult) |
+| Klik na HRÁT (skořápky) | `ui_click` | `ShellGame.tsx` (handlePlay) |
+| Začátek míchání | `shell_shuffle` | `ShellGame.tsx` (startShuffling) |
+| Klik na kelímek | `ui_click` | `ShellGame.tsx` (handleSelectCup) |
+| Reveal kuličky | `spin_stop` | `ShellGame.tsx` (handleSelectCup) |
+| Prohra (skořápky) | `lose` | `ShellGame.tsx` (handleSelectCup) |
+| Koupě losu | `ui_click` | `ScratchCard.tsx` (handleBuy) |
+| Stírání losu | `scratch` | `ScratchCard.tsx` (startScratching) |
+| Dokončení odhalení | `spin_stop` | `ScratchCard.tsx` (handleThresholdReached) |
+| Prohra (losy) | `lose` | `ScratchCard.tsx` (handleThresholdReached) |
+| Otevření welcome popupu | `popup_open` | `WelcomePrizeModal.tsx` (mount) |
+| Vyzvednutí výhry | `ui_click` (klik) + `credit_added` (po úspěchu) | `WelcomePrizeModal.tsx` |
+| Otevření dobití | `topup_open` | `TopUpModal.tsx` (mount) |
+| Login/topup CTA | `ui_click` | `AccountOverlay.tsx`, `AccountPanel.tsx`, `LoginModal.tsx` |
+
+## Co ještě chybí dodat ručně
+
+1. **`devil_laugh`** — asset záměrně není (registrovaný placeholder, nikde
+   se nevolá). Až bude nahrávka, stačí ji položit do
+   `public/audio/sfx/devil-laugh.mp3` a v `sfx.ts` přepnout
+   `placeholder: false`.
+2. **Ověření licencí u hudby** — u všech 4 tracků (2× casino, 2× universal)
+   je licence neověřená; dohledat a potvrdit licenční text (pravděpodobně
+   Pixabay Content License) a přepsat `source` / `license` /
+   `attributionRequired` v `tracks.ts` + tabulky výš.
+3. Volitelně: realističtější SFX nahrávky místo generovaných (viz úvod
+   sekce SFX) — stačí nahradit soubory na stejných cestách.
 
 ## Checklist před přidáním nového souboru
 
-- [ ] Licence je jednoznačně identifikovaná (ne "asi volné", ale ověřený text licence)
+- [ ] Licence je jednoznačně identifikovaná (ne „asi volné“, ale ověřený text)
 - [ ] `author`/`source`/`license`/`attributionRequired` vyplněné v `tracks.ts`/`sfx.ts`
-- [ ] Pokud `attributionRequired: true`, attribution text je evidovaný (viz tabulka výš) a bude zobrazený tam, kde to licence vyžaduje
-- [ ] Soubor je rozumně komprimovaný (MP3, ne desítky MB — viz zadání "výkon")
+- [ ] Pokud `attributionRequired: true`, attribution text je evidovaný a zobrazený tam, kde to licence vyžaduje
+- [ ] Soubor je rozumně komprimovaný (MP3, ne desítky MB — viz zadání „výkon“)
 - [ ] `placeholder: false` nastaveno v registry

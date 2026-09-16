@@ -22,6 +22,12 @@ import AchievementToast from "./AchievementToast";
 import Reel from "./Reel";
 
 const SPIN_ANIMATION_MS = 900;
+// Cvakání válců během točení — záměrně řídké (cca 5 ticků za 900ms spin),
+// ať je to slyšet jako mechanika a ne jako kakofonie (viz zadání "max pár
+// ticků za sekundu, nesmí být otravné"). Řídí to efekt na `spinning` níž,
+// takže ticky skončí přesně s animací (žádný setInterval, žádné ruční
+// zastavování ve všech větvích spinu).
+const REEL_TICK_MS = 190;
 const JACKPOT_FLASH_MS = 800;
 const GAME_ID = "automaty";
 // Globální statistiky se reportují v DÁVKÁCH, ne po každém spinu (viz
@@ -123,6 +129,7 @@ type SlotMachineProps = {
 export default function SlotMachine({ embedded, layout, creditGate }: SlotMachineProps = {}) {
   const { session, refresh: refreshSession } = useSession();
   const audio = useAudio();
+  const { playSfx } = audio;
   const [mounted, setMounted] = useState(false);
   const [player, setPlayer] = useState<PlayerState | null>(null);
   const [bet, setBet] = useState(MIN_BET);
@@ -168,6 +175,26 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
       return current;
     });
   }, [maxAllowedBet]);
+
+  // Jemné cvakání válců BĚHEM animace — efekt visí na `spinning`, takže se
+  // sám ukončí, jakmile spin dojede (i při chybě wallet requestu) a nikdy
+  // neběží mimo animaci. `playSfx` má stabilní identitu (useCallback v
+  // AudioProvideru), takže efekt se nespouští při každém renderu.
+  useEffect(() => {
+    if (!spinning) return;
+
+    let cancelled = false;
+    let timeoutId = window.setTimeout(function tick() {
+      if (cancelled) return;
+      playSfx("reel_tick");
+      timeoutId = window.setTimeout(tick, REEL_TICK_MS);
+    }, REEL_TICK_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [spinning, playSfx]);
 
   // Automaticky nabídne dobití/přihlášení, jakmile hráči na skutečnou hru
   // nezbývá ani minimální sázka (viz zadání "modal se má objevit i s
@@ -278,6 +305,8 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
     }
 
     const wagered = bet;
+    // Nejdřív klik tlačítka, pak mechanické zatažení páky (viz zadání).
+    audio.playSfx("ui_click");
     audio.playSfx("spin_start");
     setSpinning(true);
     setResultMessage(null);
@@ -492,7 +521,10 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
               <span className="text-xs font-semibold uppercase tracking-wide text-gembl-muted md:text-[clamp(0.5rem,1vw,0.75rem)]">Sázka</span>
               <button
                 type="button"
-                onClick={() => adjustBet(-BET_STEP)}
+                onClick={() => {
+                  audio.playSfx("ui_click");
+                  adjustBet(-BET_STEP);
+                }}
                 disabled={spinning || bet <= MIN_BET}
                 aria-label="Snížit sázku"
                 className="flex h-9 w-9 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-lg font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red md:h-[clamp(1.5rem,2.6vw,2.5rem)] md:w-[clamp(1.5rem,2.6vw,2.5rem)] md:text-[clamp(0.8rem,1.6vw,1.2rem)]"
@@ -502,7 +534,10 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
               <span className="min-w-[3.5em] text-center font-mono text-base font-bold text-gembl-ink md:text-[clamp(0.75rem,1.5vw,1.15rem)]">{bet} G</span>
               <button
                 type="button"
-                onClick={() => adjustBet(BET_STEP)}
+                onClick={() => {
+                  audio.playSfx("ui_click");
+                  adjustBet(BET_STEP);
+                }}
                 disabled={spinning || bet >= maxAllowedBet}
                 aria-label="Zvýšit sázku"
                 className="flex h-9 w-9 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-lg font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red md:h-[clamp(1.5rem,2.6vw,2.5rem)] md:w-[clamp(1.5rem,2.6vw,2.5rem)] md:text-[clamp(0.8rem,1.6vw,1.2rem)]"

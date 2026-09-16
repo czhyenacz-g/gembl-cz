@@ -1,6 +1,9 @@
 // Datové typy pro audio vrstvu (hudba + SFX) — viz AudioProvider.tsx pro
 // samotný manager a docs/audio-assets.md pro licenční evidenci tracků.
 
+/** Které stránky mají jakou hudbu (viz lib/audio/route-playlist.ts). */
+export type MusicPlaylistId = "casino" | "universal";
+
 export type MusicTrack = {
   /** Stabilní klíč, nezávislý na pořadí v playlistu. */
   id: string;
@@ -28,8 +31,10 @@ export type SfxId =
   | "lose"
   | "credit_added"
   | "popup_open"
-  | "devil_laugh"
-  | "topup_open";
+  | "topup_open"
+  | "shell_shuffle"
+  | "scratch"
+  | "devil_laugh";
 
 export type SfxDefinition = {
   id: SfxId;

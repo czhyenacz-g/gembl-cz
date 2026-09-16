@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useAudio } from "../../../lib/audio/AudioProvider.tsx";
 import ModalShell from "../ModalShell";
 
 // Jedna obrazovka pro login i registraci zároveň (viz zadání) — nový email
@@ -15,12 +16,14 @@ export default function LoginModal({
   callbackUrl?: string;
   leadText?: string;
 }) {
+  const { playSfx } = useAudio();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (status === "sending") return;
+    playSfx("ui_click");
     setStatus("sending");
     try {
       const response = await fetch("/api/auth/magic-link", {

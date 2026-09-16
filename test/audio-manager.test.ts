@@ -4,14 +4,17 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const {
-  DEFAULT_AUDIO_PREFERENCES,
-  loadAudioPreferences,
-  saveAudioPreferences,
-} = await import("../lib/audio/preferences.ts");
-const { MUSIC_PLAYLIST } = await import("../lib/audio/tracks.ts");
+const { DEFAULT_AUDIO_PREFERENCES, loadAudioPreferences, saveAudioPreferences } = await import(
+  "../lib/audio/preferences.ts"
+);
+const { MUSIC_PLAYLISTS } = await import("../lib/audio/tracks.ts");
 const { SFX_REGISTRY } = await import("../lib/audio/sfx.ts");
 const { getActiveIndices, pickRandomTrackIndex } = await import("../lib/audio/playlist.ts");
+const { getPlaylistForPath } = await import("../lib/audio/route-playlist.ts");
+
+const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const read = (p: string) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8");
+const PLAYLIST_IDS = ["casino", "universal"] as const;
 
 class FakeStorage {
   private store = new Map<string, string>();
@@ -94,76 +97,122 @@ describe("saveAudioPreferences", () => {
   });
 });
 
-describe("MUSIC_PLAYLIST", () => {
-  test("obsahuje aspoň jednu skladbu, každá má src pod /audio/music/", () => {
-    assert.ok(MUSIC_PLAYLIST.length > 0);
-    for (const track of MUSIC_PLAYLIST) {
-      assert.match(track.src, /^\/audio\/music\/.+\.mp3$/);
-      assert.equal(typeof track.placeholder, "boolean");
-    }
-  });
-
-  test("id skladeb jsou unikátní", () => {
-    const ids = MUSIC_PLAYLIST.map((t) => t.id);
-    assert.equal(new Set(ids).size, ids.length);
-  });
-
-  test("aktivní (placeholder: false) tracky ukazují na soubory, co reálně existují v public/", () => {
-    const repoRoot = fileURLToPath(new URL("..", import.meta.url));
-    const activeTracks = MUSIC_PLAYLIST.filter((t) => !t.placeholder);
-    assert.ok(activeTracks.length >= 2, "očekávány aspoň 2 reálné produkční tracky");
-    for (const track of activeTracks) {
-      const filePath = path.join(repoRoot, "public", track.src);
-      assert.ok(existsSync(filePath), `${track.src} neexistuje v public/`);
-      const size = statSync(filePath).size;
-      assert.ok(size > 0, `${track.src} je prázdný soubor`);
-      // "nejsou extrémně velké" (viz zadání) — 5 MB je bezpečná horní mez pro pár minut 128 kbps MP3.
-      assert.ok(size < 5 * 1024 * 1024, `${track.src} je podezřele velký (${size} B)`);
-    }
-  });
-
-  test("reálné tracky mají vyplněné author/source/license (i když je licence zatím needs-verification), ne prázdné TODO", () => {
-    for (const track of MUSIC_PLAYLIST.filter((t) => !t.placeholder)) {
-      assert.notEqual(track.author, "TODO");
-      assert.ok(track.source.length > 0);
-      assert.ok(track.license.length > 0);
-    }
+describe("výchozí hlasitosti (viz zadání: hudba 0.15–0.22, SFX 0.35–0.5)", () => {
+  test("hudba je tichá kulisa, SFX je slyšet ale nepřehlušuje", () => {
+    assert.ok(
+      DEFAULT_AUDIO_PREFERENCES.volumeMusic >= 0.15 && DEFAULT_AUDIO_PREFERENCES.volumeMusic <= 0.22,
+      `volumeMusic ${DEFAULT_AUDIO_PREFERENCES.volumeMusic} mimo 0.15–0.22`
+    );
+    assert.ok(
+      DEFAULT_AUDIO_PREFERENCES.volumeSfx >= 0.35 && DEFAULT_AUDIO_PREFERENCES.volumeSfx <= 0.5,
+      `volumeSfx ${DEFAULT_AUDIO_PREFERENCES.volumeSfx} mimo 0.35–0.5`
+    );
   });
 });
 
-describe("lib/audio/playlist.ts: náhodný výběr playlistu", () => {
-  test("getActiveIndices vrací jen indexy neplaceholder tracků", () => {
-    const active = getActiveIndices();
-    for (const index of active) assert.equal(MUSIC_PLAYLIST[index]?.placeholder, false);
+describe("MUSIC_PLAYLISTS — dva oddělené světy (casino vs universal)", () => {
+  test("obsahuje právě playlisty casino a universal, každý se 2 tracky", () => {
+    assert.deepEqual(Object.keys(MUSIC_PLAYLISTS).sort(), [...PLAYLIST_IDS].sort());
+    for (const id of PLAYLIST_IDS) {
+      assert.equal(MUSIC_PLAYLISTS[id].length, 2, `${id} má mít 2 tracky (viz zadání "očekávám 2 tracky")`);
+    }
   });
 
-  test("pickRandomTrackIndex s injektovaným random je deterministický (stejný vzor jako slot-engine.ts spin)", () => {
-    const active = getActiveIndices();
-    assert.equal(pickRandomTrackIndex(null, () => 0), active[0]);
-    assert.equal(pickRandomTrackIndex(null, () => 0.999), active[active.length - 1]);
+  test("každý track má src pod /audio/music/ a unikátní id v rámci všech playlistů", () => {
+    const ids = new Set<string>();
+    for (const id of PLAYLIST_IDS) {
+      for (const track of MUSIC_PLAYLISTS[id]) {
+        assert.match(track.src, /^\/audio\/music\/.+\.mp3$/);
+        assert.equal(typeof track.placeholder, "boolean");
+        assert.ok(!ids.has(track.id), `duplicitní track id ${track.id}`);
+        ids.add(track.id);
+      }
+    }
+    assert.equal(ids.size, 4);
   });
 
-  test("s 2+ aktivními tracky NIKDY nevrátí excludeIndex (žádné bezprostřední opakování stejné skladby)", () => {
-    const active = getActiveIndices();
-    if (active.length < 2) return; // test má smysl jen s 2+ aktivními tracky
-    for (const excludeIndex of active) {
-      for (let i = 0; i < 50; i++) {
-        assert.notEqual(pickRandomTrackIndex(excludeIndex, Math.random), excludeIndex);
+  test("casino playlist = původní retro-casino tracky, universal = nové lounge tracky", () => {
+    assert.deepEqual(
+      MUSIC_PLAYLISTS.casino.map((t) => t.src),
+      ["/audio/music/retro-casino-01.mp3", "/audio/music/retro-casino-02.mp3"]
+    );
+    assert.deepEqual(
+      MUSIC_PLAYLISTS.universal.map((t) => t.src),
+      ["/audio/music/universal-lounge-01.mp3", "/audio/music/universal-lounge-02.mp3"]
+    );
+  });
+
+  test("všechny tracky jsou reálné (placeholder: false), soubory existují v public/ a nejsou obří", () => {
+    for (const id of PLAYLIST_IDS) {
+      for (const track of MUSIC_PLAYLISTS[id]) {
+        assert.equal(track.placeholder, false, `${track.id} má být reálný soubor`);
+        const filePath = path.join(REPO_ROOT, "public", track.src);
+        assert.ok(existsSync(filePath), `${track.src} neexistuje v public/`);
+        const size = statSync(filePath).size;
+        assert.ok(size > 0 && size < 5 * 1024 * 1024, `${track.src} má podezřelou velikost ${size} B`);
       }
     }
   });
 
-  test("nad 200 losování pokryje víc než jeden track (reálné náhodné střídání, ne pevný jeden výsledek)", () => {
-    const active = getActiveIndices();
-    if (active.length < 2) return;
-    const seen = new Set<number>();
-    let previous: number | null = null;
-    for (let i = 0; i < 200; i++) {
-      const next = pickRandomTrackIndex(previous);
-      seen.add(next);
-      previous = next;
+  test("reálné tracky mají vyplněné author/source/license (i když je licence zatím needs-verification), ne prázdné TODO", () => {
+    for (const id of PLAYLIST_IDS) {
+      for (const track of MUSIC_PLAYLISTS[id]) {
+        assert.notEqual(track.author, "TODO");
+        assert.ok(track.source.length > 0);
+        assert.ok(track.license.length > 0);
+      }
     }
-    assert.ok(seen.size > 1);
+  });
+});
+
+describe("lib/audio/playlist.ts: náhodný výběr v rámci playlistu", () => {
+  for (const playlistId of PLAYLIST_IDS) {
+    test(`${playlistId}: getActiveIndices vrací jen indexy neplaceholder tracků`, () => {
+      const active = getActiveIndices(playlistId);
+      assert.ok(active.length > 0);
+      for (const index of active) assert.equal(MUSIC_PLAYLISTS[playlistId][index]?.placeholder, false);
+    });
+
+    test(`${playlistId}: pickRandomTrackIndex s injektovaným random je deterministický`, () => {
+      const active = getActiveIndices(playlistId);
+      assert.equal(pickRandomTrackIndex(playlistId, null, () => 0), active[0]);
+      assert.equal(pickRandomTrackIndex(playlistId, null, () => 0.999), active[active.length - 1]);
+    });
+
+    test(`${playlistId}: s 2+ aktivními tracky NIKDY nevrátí excludeIndex`, () => {
+      const active = getActiveIndices(playlistId);
+      if (active.length < 2) return;
+      for (const excludeIndex of active) {
+        for (let i = 0; i < 50; i++) {
+          assert.notEqual(pickRandomTrackIndex(playlistId, excludeIndex, Math.random), excludeIndex);
+        }
+      }
+    });
+  }
+});
+
+describe("lib/audio/route-playlist.ts: která stránka hraje co", () => {
+  test("herní stránky hrají casino playlist", () => {
+    for (const route of ["/casino", "/automaty", "/skorapky", "/losy"]) {
+      assert.equal(getPlaylistForPath(route), "casino", route);
+    }
+  });
+
+  test("obsahové stránky hrají universal playlist", () => {
+    for (const route of ["/profil", "/zebricky", "/jak-to-funguje"]) {
+      assert.equal(getPlaylistForPath(route), "universal", route);
+    }
+  });
+
+  test("route bez playlistu (např. /reset) hraje ticho, ne omylem nějaký playlist", () => {
+    assert.equal(getPlaylistForPath("/reset"), null);
+    assert.equal(getPlaylistForPath("/"), null);
+    assert.equal(getPlaylistForPath("/neexistuje"), null);
+  });
+
+  test("podstrom dědí playlist rodiče, ale podobná route ne (žádný substring match)", () => {
+    assert.equal(getPlaylistForPath("/profil/neco"), "universal");
+    assert.equal(getPlaylistForPath("/automaty-2"), null);
   });
 });
 
@@ -177,15 +226,44 @@ describe("SFX_REGISTRY", () => {
     "lose",
     "credit_added",
     "popup_open",
-    "devil_laugh",
     "topup_open",
+    "shell_shuffle",
+    "scratch",
+    "devil_laugh",
   ] as const;
 
-  test("obsahuje přesně všechny SFX id ze zadání, každý se src pod /audio/sfx/", () => {
+  test("obsahuje přesně všechna SFX id (včetně nových shell_shuffle a scratch), každý se src pod /audio/sfx/", () => {
     assert.deepEqual(Object.keys(SFX_REGISTRY).sort(), [...expectedIds].sort());
     for (const id of expectedIds) {
       assert.equal(SFX_REGISTRY[id].id, id);
       assert.match(SFX_REGISTRY[id].src, /^\/audio\/sfx\/.+\.mp3$/);
+    }
+  });
+
+  test("všechny soubory kromě devil_laugh reálně existují, jsou krátké a malé", () => {
+    const placeholders = Object.values(SFX_REGISTRY).filter((def) => def.placeholder);
+    assert.deepEqual(
+      placeholders.map((def) => def.id),
+      ["devil_laugh"],
+      "jediný zamýšlený placeholder je devil_laugh (viz zadání)"
+    );
+
+    for (const def of Object.values(SFX_REGISTRY)) {
+      if (def.placeholder) continue;
+      const filePath = path.join(REPO_ROOT, "public", def.src);
+      assert.ok(existsSync(filePath), `${def.src} neexistuje v public/`);
+      const size = statSync(filePath).size;
+      assert.ok(size > 0 && size < 200 * 1024, `${def.src} má podezřelou velikost ${size} B`);
+    }
+  });
+
+  test("každý SFX soubor je opravdu MP3 (ID3 hlavička nebo MPEG frame sync)", () => {
+    for (const def of Object.values(SFX_REGISTRY)) {
+      if (def.placeholder) continue;
+      const bytes = readFileSync(path.join(REPO_ROOT, "public", def.src));
+      const isId3 = bytes.slice(0, 3).toString("ascii") === "ID3";
+      const isFrameSync = bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0;
+      assert.ok(isId3 || isFrameSync, `${def.src} nevypadá jako MP3`);
     }
   });
 });
@@ -209,33 +287,50 @@ function listSourceFiles(dir: string): string[] {
 
 describe("Audio architektura: jediné centrální místo tvoří new Audio()", () => {
   test("app/ a lib/ mimo lib/audio/AudioProvider.tsx nikde přímo nevolají `new Audio(`", () => {
-    const repoRoot = fileURLToPath(new URL("..", import.meta.url));
-    const providerPath = path.join(repoRoot, "lib", "audio", "AudioProvider.tsx");
+    const providerPath = path.join(REPO_ROOT, "lib", "audio", "AudioProvider.tsx");
     const offenders: string[] = [];
 
     for (const dir of ["app", "lib"]) {
-      for (const file of listSourceFiles(path.join(repoRoot, dir))) {
+      for (const file of listSourceFiles(path.join(REPO_ROOT, dir))) {
         if (file === providerPath) continue;
-        const content = readFileSync(file, "utf8");
-        if (/new Audio\(/.test(content)) offenders.push(path.relative(repoRoot, file));
+        if (/new Audio\(/.test(readFileSync(file, "utf8"))) offenders.push(path.relative(REPO_ROOT, file));
       }
     }
 
     assert.deepEqual(offenders, []);
   });
+
+  test("AudioProvider je v celém app/ mountnutý právě jednou (žádný druhý provider)", () => {
+    const mounts: string[] = [];
+    for (const file of listSourceFiles(path.join(REPO_ROOT, "app"))) {
+      if (/<AudioProvider[\s>]/.test(readFileSync(file, "utf8"))) mounts.push(path.relative(REPO_ROOT, file));
+    }
+    assert.deepEqual(mounts, [path.join("app", "(site)", "layout.tsx")]);
+  });
 });
 
-describe("AudioProvider.tsx: playlist používá náhodný výběr a fade při přechodu, ne pevné pořadí", () => {
+describe("AudioProvider.tsx: route-aware playlist, náhodný výběr a fade při přechodu", () => {
   const source = readFileSync(fileURLToPath(new URL("../lib/audio/AudioProvider.tsx", import.meta.url)), "utf8");
 
-  test("výběr dalšího tracku jde přes pickRandomTrackIndex z playlist.ts, ne (index + 1) % length", () => {
+  test("playlist se čte z aktuální route (usePathname + route-playlist.ts), ne z propu každého layoutu", () => {
+    assert.match(source, /import \{ usePathname \} from "next\/navigation";/);
+    assert.match(source, /import \{ getPlaylistForPath \} from "\.\/route-playlist\.ts";/);
+    assert.match(source, /const playlistId = getPlaylistForPath\(pathname\);/);
+  });
+
+  test("přechod mezi playlisty dělá fade-out starého a fade-in nového tracku", () => {
+    assert.match(source, /if \(!el\.paused && el\.src\) \{\s*stopTrack\(\(\) => startTrack\(playlistId, null\)\);/);
+    assert.match(source, /const startTrack = useCallback\(/);
+    assert.match(source, /const stopTrack = useCallback\(/);
+  });
+
+  test("výběr tracku jde přes pickRandomTrackIndex z playlist.ts (playlist-scoped), ne (index + 1) % length", () => {
     assert.match(source, /import \{ getActiveIndices, pickRandomTrackIndex \} from "\.\/playlist\.ts"/);
-    assert.match(source, /trackIndexRef\.current = pickRandomTrackIndex\(trackIndexRef\.current\)/);
-    assert.doesNotMatch(source, /trackIndexRef\.current \+ 1\) % MUSIC_PLAYLIST\.length/);
+    assert.match(source, /const index = pickRandomTrackIndex\(id, excludeIndex\);/);
+    assert.doesNotMatch(source, /\(index \+ 1\) % /);
   });
 
   test("fade-in/fade-out při přechodu mezi tracky (TRACK_FADE_MS v zadaném rozsahu 0.5–1.5 s), žádné WebAudio API", () => {
-    assert.match(source, /const TRACK_FADE_MS = (\d+);/);
     const ms = Number(/const TRACK_FADE_MS = (\d+);/.exec(source)?.[1]);
     assert.ok(ms >= 500 && ms <= 1500, `TRACK_FADE_MS (${ms}ms) mimo zadaný rozsah 500-1500ms`);
     assert.match(source, /fadeVolumeTo\(el, 0,/);
@@ -243,20 +338,51 @@ describe("AudioProvider.tsx: playlist používá náhodný výběr a fade při p
     assert.doesNotMatch(source, /new (window\.)?(AudioContext|webkitAudioContext)\(|createGain\(/);
   });
 
-  test("hudební <audio> element má preload=\"none\" (žádné stahování obou tracků při prvním renderu)", () => {
+  test("hudební <audio> element má preload=\"none\" (žádné stahování tracků při prvním renderu)", () => {
     assert.match(source, /el\.preload = "none";/);
+  });
+
+  test("playSfx nikdy nevyhodí chybu do volajícího (try/catch + .catch() na play) — chybějící asset nesmí shodit hru", () => {
+    const playSfxFn = /const playSfx = useCallback\(\(id: SfxId\) => \{[\s\S]*?\n {2}\}, \[\]\);/.exec(source)?.[0] ?? "";
+    assert.ok(playSfxFn.length > 0, "playSfx musí existovat");
+    assert.match(playSfxFn, /try \{/);
+    assert.match(playSfxFn, /catch \{/);
+    assert.match(playSfxFn, /void el\.play\(\)\.catch\(\(\) => \{/);
   });
 });
 
-describe("SlotMachine.tsx: audio SFX napojené na spin/výsledek přes useAudio(), ne vlastní Audio()", () => {
+describe("app/(site)/layout.tsx: jeden globální AudioProvider + toggle", () => {
+  const source = readFileSync(fileURLToPath(new URL("../app/(site)/layout.tsx", import.meta.url)), "utf8");
+
+  test("mountuje AudioProvider i AudioToggle pro celý web", () => {
+    assert.match(source, /import AudioProvider from "\.\.\/\.\.\/lib\/audio\/AudioProvider\.tsx";/);
+    assert.match(source, /import AudioToggle from "\.\.\/components\/audio\/AudioToggle\.tsx";/);
+    assert.match(source, /<AudioProvider>/);
+    assert.match(source, /<AudioToggle \/>/);
+    assert.match(source, /\{children\}/);
+  });
+
+  test("her se už netýkají vlastní audio layouty (byly by druhý provider)", () => {
+    for (const route of ["casino", "losy", "skorapky"]) {
+      assert.equal(
+        existsSync(path.join(REPO_ROOT, "app", "(site)", route, "layout.tsx")),
+        false,
+        `app/(site)/${route}/layout.tsx už nemá existovat`
+      );
+    }
+  });
+});
+
+describe("SlotMachine.tsx: SFX napojené na spin/válce/výsledek přes useAudio()", () => {
   const source = readFileSync(fileURLToPath(new URL("../app/(site)/automaty/SlotMachine.tsx", import.meta.url)), "utf8");
 
   test("importuje useAudio z centrálního AudioProvider", () => {
     assert.match(source, /import \{ useAudio \} from "\.\.\/\.\.\/\.\.\/lib\/audio\/AudioProvider\.tsx"/);
   });
 
-  test("handleSpin přehraje spin_start při kliknutí na spin", () => {
+  test("handleSpin přehraje ui_click (klik) i spin_start (páka) při kliknutí na spin", () => {
     const handleSpinFn = /function handleSpin\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
+    assert.match(handleSpinFn, /audio\.playSfx\("ui_click"\)/);
     assert.match(handleSpinFn, /audio\.playSfx\("spin_start"\)/);
   });
 
@@ -271,32 +397,81 @@ describe("SlotMachine.tsx: audio SFX napojené na spin/výsledek přes useAudio(
   test("classifySpinResult je čistá funkce nad už hotovým výsledkem (nemění payout)", () => {
     assert.doesNotMatch(source, /function classifySpinResult[\s\S]*?payout\s*=/);
   });
+
+  test("reel_tick se hraje jen BĚHEM točení (efekt na `spinning`) a je throttlovaný", () => {
+    const tickEffect = /useEffect\(\(\) => \{\s*if \(!spinning\) return;[\s\S]*?\n {2}\}, \[spinning, playSfx\]\);/.exec(source)?.[0] ?? "";
+    assert.ok(tickEffect.length > 0, "efekt pro reel_tick musí být gatovaný na `spinning`");
+    assert.match(tickEffect, /playSfx\("reel_tick"\)/);
+    const tickMs = Number(/const REEL_TICK_MS = (\d+);/.exec(source)?.[1]);
+    assert.ok(tickMs >= 150, `REEL_TICK_MS (${tickMs}ms) je moc rychlé (max pár ticků za sekundu)`);
+    // Záměrně bez setInterval (viz slot-machine-wiring.test.ts) — řetěz setTimeoutů,
+    // který se sám ukončí s animací.
+    assert.doesNotMatch(tickEffect, /setInterval/);
+    assert.match(tickEffect, /window\.setTimeout\(tick, REEL_TICK_MS\)/);
+  });
+
+  test("+/- sázka hraje ui_click (a jen když je tlačítko opravdu aktivní)", () => {
+    assert.match(source, /onClick=\{\(\) => \{\s*audio\.playSfx\("ui_click"\);\s*adjustBet\(-BET_STEP\);\s*\}\}/);
+    assert.match(source, /onClick=\{\(\) => \{\s*audio\.playSfx\("ui_click"\);\s*adjustBet\(BET_STEP\);\s*\}\}/);
+  });
 });
 
-describe("WelcomePrizeModal.tsx: popup_open při otevření, credit_added po úspěšném claimu", () => {
-  const source = readFileSync(fileURLToPath(new URL("../app/components/wallet/WelcomePrizeModal.tsx", import.meta.url)), "utf8");
+describe("ShellGame.tsx: SFX míchání a výběru kelímku", () => {
+  const source = readFileSync(fileURLToPath(new URL("../app/(site)/skorapky/ShellGame.tsx", import.meta.url)), "utf8");
 
-  test("importuje useAudio z centrálního AudioProvider", () => {
-    assert.match(source, /import \{ useAudio \} from "\.\.\/\.\.\/\.\.\/lib\/audio\/AudioProvider\.tsx"/);
+  test("klik na HRÁT hraje ui_click (ne zvuk páky z automatů)", () => {
+    const handlePlayFn = /function handlePlay\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
+    assert.match(handlePlayFn, /playSfx\("ui_click"\)/);
+    assert.doesNotMatch(handlePlayFn, /playSfx\("spin_start"\)/);
   });
 
-  test("popup_open se hraje v useEffect s prázdnými/stabilními deps (jen jednou při mountu)", () => {
+  test("začátek míchání hraje shell_shuffle (mechanické dřevěné posuny)", () => {
+    const startFn = /function startShuffling\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
+    assert.match(startFn, /playSfx\("shell_shuffle"\)/);
+  });
+
+  test("klik na kelímek = ui_click, reveal = spin_stop, prohra = lose", () => {
+    const selectFn = /function handleSelectCup\(cup: CupIndex\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
+    assert.match(selectFn, /playSfx\("ui_click"\)/);
+    assert.match(selectFn, /playSfx\("spin_stop"\)/);
+    assert.match(selectFn, /playSfx\("lose"\)/);
+  });
+});
+
+describe("ScratchCard.tsx: SFX koupě a stírání losu", () => {
+  const source = readFileSync(fileURLToPath(new URL("../app/(site)/losy/ScratchCard.tsx", import.meta.url)), "utf8");
+
+  test("koupě losu hraje ui_click, stírání scratch, reveal spin_stop, prohra lose", () => {
+    const buyFn = /function handleBuy\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
+    const scratchFn = /function startScratching\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
+    const thresholdFn = /function handleThresholdReached\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
+    assert.match(buyFn, /playSfx\("ui_click"\)/);
+    assert.match(scratchFn, /playSfx\("scratch"\)/);
+    assert.match(thresholdFn, /playSfx\("spin_stop"\)/);
+    assert.match(thresholdFn, /playSfx\("lose"\)/);
+  });
+});
+
+describe("WelcomePrizeModal.tsx / TopUpModal.tsx / LoginModal.tsx: SFX modalů", () => {
+  test("welcome popup: popup_open při otevření, ui_click na claim, credit_added až po úspěchu", () => {
+    const source = readFileSync(fileURLToPath(new URL("../app/components/wallet/WelcomePrizeModal.tsx", import.meta.url)), "utf8");
     assert.match(source, /useEffect\(\(\) => \{\s*playSfx\("popup_open"\);\s*\}, \[playSfx\]\);/);
-  });
-
-  test("credit_added se hraje až PO úspěšném přijetí balance ze serveru, ne dřív", () => {
     const handleClaimFn = /async function handleClaim\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
-    const balanceCheckIndex = handleClaimFn.indexOf("typeof data.balance !== \"number\"");
+    assert.match(handleClaimFn, /playSfx\("ui_click"\)/);
+    const balanceCheckIndex = handleClaimFn.indexOf('typeof data.balance !== "number"');
     const creditAddedIndex = handleClaimFn.indexOf('playSfx("credit_added")');
     assert.ok(balanceCheckIndex > -1 && creditAddedIndex > -1 && creditAddedIndex > balanceCheckIndex);
   });
-});
 
-describe("app/(site)/casino/layout.tsx: AudioProvider scoped na /casino", () => {
-  const source = readFileSync(fileURLToPath(new URL("../app/(site)/casino/layout.tsx", import.meta.url)), "utf8");
+  test("dobití: topup_open při otevření modalu (čistě prezentační, Stripe flow netknutý)", () => {
+    const source = readFileSync(fileURLToPath(new URL("../app/components/wallet/TopUpModal.tsx", import.meta.url)), "utf8");
+    assert.match(source, /useEffect\(\(\) => \{\s*playSfx\("topup_open"\);\s*\}, \[playSfx\]\);/);
+    assert.match(source, /fetch\("\/api\/checkout\/session"/);
+  });
 
-  test("obaluje children AudioProviderem, ať se hudba zastaví při odchodu z /casino (unmount layoutu)", () => {
-    assert.match(source, /<AudioProvider>/);
-    assert.match(source, /\{children\}/);
+  test("login CTA: ui_click při odeslání formuláře", () => {
+    const source = readFileSync(fileURLToPath(new URL("../app/components/auth/LoginModal.tsx", import.meta.url)), "utf8");
+    const submitFn = /async function handleSubmit\(event: FormEvent\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
+    assert.match(submitFn, /playSfx\("ui_click"\)/);
   });
 });

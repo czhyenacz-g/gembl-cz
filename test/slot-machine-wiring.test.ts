@@ -107,7 +107,8 @@ test("SlotMachine.tsx: nově odemknuté achievementy se pushnou jako toasty po k
 });
 
 test("SlotMachine.tsx: žádný setInterval (polling) — jen jednorázové setTimeout na animace", () => {
-  assert.doesNotMatch(source, /setInterval/);
+  // Hledáme skutečné VOLÁNÍ (i reel_tick je řetěz setTimeoutů, viz audio testy).
+  assert.doesNotMatch(source, /setInterval\(/);
 });
 
 test("SlotMachine.tsx: čte/ukládá stav přes storage.ts (loadPlayerState/savePlayerState), ne přímo localStorage", () => {

@@ -35,6 +35,7 @@ export default function WelcomePrizeModal({
   }, [playSfx]);
 
   async function handleClaim() {
+    playSfx("ui_click");
     if (!loggedIn) {
       onRequestLogin();
       return;

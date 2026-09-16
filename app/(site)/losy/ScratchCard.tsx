@@ -112,6 +112,9 @@ export default function ScratchCard() {
     // (čerstvý canvas), ne ruční reset předchozího stavu.
     setRoundKey((key) => key + 1);
     setPhase("scratching");
+    // Papírové/mincové škrábání — jednou na začátku stírání (ne v loopu,
+    // ať to nezešílí, viz zadání "krátké a fyzické").
+    playSfx("scratch");
   }
 
   async function purchaseAndStart() {
