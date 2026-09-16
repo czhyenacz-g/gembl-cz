@@ -3,14 +3,23 @@
 import { SYMBOL_DISPLAY } from "../../../lib/casino/slot-engine";
 import type { SlotSymbol } from "../../../lib/casino/types";
 
-// Jeden válec — během roztočení ukazuje rozmazanou smyčku symbolů (viz
-// .animate-reel-spin v globals.css), po doběhnutí vykreslí skutečný
-// výsledek. `symbol === null` je jen výchozí stav před prvním spinem.
+// Jeden válec — během roztočení ukazuje smyčku symbolů (viz .animate-reel-spin
+// v globals.css), po doběhnutí skutečný výsledek. `symbol === null` je jen
+// výchozí stav před prvním spinem. Komponenta se roztahuje do svého rodiče
+// (h-full w-full) — rámeček/pozadí řeší artwork scény, ne tahle komponenta
+// (viz zadání "nevytvářej přes připravené válce další HTML boxy"). Velikost
+// symbolu se škáluje se scénou (clamp), bar/bar symbol menší jako dřív.
+const SYMBOL_FONT = "clamp(1.4rem, 4.6vw, 4.5rem)";
+const BAR_FONT = "clamp(0.8rem, 2.4vw, 2.4rem)";
+
 export default function Reel({ symbol, spinning }: { symbol: SlotSymbol | null; spinning: boolean }) {
   return (
-    <div className="flex h-24 w-20 shrink-0 items-center justify-center overflow-hidden border-2 border-gembl-ink bg-gembl-paper shadow-hard-sm sm:h-28 sm:w-24">
+    <div className="flex h-full w-full items-center justify-center overflow-hidden">
       {spinning ? (
-        <div className="animate-reel-spin flex flex-col items-center gap-4 text-4xl sm:text-5xl">
+        <div
+          className="animate-reel-spin flex flex-col items-center"
+          style={{ fontSize: SYMBOL_FONT, lineHeight: 1, gap: "0.25em" }}
+        >
           <span>🍒</span>
           <span>🍋</span>
           <span className="text-gembl-red">7</span>
@@ -18,9 +27,10 @@ export default function Reel({ symbol, spinning }: { symbol: SlotSymbol | null; 
         </div>
       ) : (
         <span
-          className={`font-mono text-4xl font-bold sm:text-5xl ${
+          className={`font-mono font-bold ${
             symbol === "seven" || symbol === "diamond" ? "text-gembl-red" : "text-gembl-ink"
-          } ${symbol === "bar" ? "text-2xl sm:text-3xl" : ""}`}
+          }`}
+          style={{ fontSize: symbol === "bar" ? BAR_FONT : SYMBOL_FONT, lineHeight: 1 }}
         >
           {symbol ? SYMBOL_DISPLAY[symbol] : "❔"}
         </span>
