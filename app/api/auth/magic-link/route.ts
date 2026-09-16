@@ -6,6 +6,7 @@ import { isRateLimitedPersistent } from "../../../../lib/auth/rate-limit-db";
 import { sanitizeCallbackUrl } from "../../../../lib/auth/safe-redirect";
 import { sendMagicLinkEmail } from "../../../../lib/auth/send-magic-link-email";
 import { getSiteUrl } from "../../../../lib/site-url";
+import { hasWelcomeBonus } from "../../../../lib/wallet/ledger";
 import { PENDING_PRIZE_COOKIE_NAME, resolveBaseAmountG, verifyPendingPrizeCookieValue } from "../../../../lib/onboarding/welcome-prize";
 
 // Odpověď je stejná bez ohledu na to, jestli email existuje, má platný
@@ -76,7 +77,24 @@ export async function POST(request: Request) {
     const loginUrl = `${getSiteUrl()}/api/auth/verify?token=${encodeURIComponent(token)}&callbackUrl=${encodeURIComponent(
       safeCallbackUrl
     )}`;
-    const { id } = await sendMagicLinkEmail({ to: email, loginUrl, welcomePrizeG: baseWelcomePrizeG });
+    // Vracejícímu se hráči se uvítací bonus už NIKDY nepřipíše (je
+    // jednorázový, viz findOrCreateUserAndGrantWelcomeBonus), takže by mu
+    // e-mail nesměl slibovat další výhru — posílá se neutrální text.
+    // Kontrola je jen kvůli textu e-mailu: když selže, chováme se jako dřív
+    // (prize varianta) a přihlášení to neshodí.
+    const alreadyGranted = await hasWelcomeBonus(email).catch((error) => {
+      console.error(
+        "POST /api/auth/magic-link: kontrola uvítacího bonusu selhala:",
+        error instanceof Error ? error.message : error
+      );
+      return false;
+    });
+
+    const { id } = await sendMagicLinkEmail({
+      to: email,
+      loginUrl,
+      welcomePrizeG: alreadyGranted ? undefined : baseWelcomePrizeG,
+    });
     // Interní doklad, že provider zprávu přijal (message ID z Resendu) —
     // bez tohohle logu by nešlo dohledat, že e-mail opravdu odešel.
     console.log(`POST /api/auth/magic-link: e-mail předán Resendu (id ${id}).`);

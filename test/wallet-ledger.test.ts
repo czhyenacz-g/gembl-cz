@@ -86,3 +86,21 @@ describe("obecná atomicita", () => {
     }
   });
 });
+
+describe("hasWelcomeBonus — jen čtení, pro volbu textu magic-link e-mailu", () => {
+  const fn = source.slice(
+    source.indexOf("export async function hasWelcomeBonus"),
+    source.indexOf("export async function findOrCreateUserAndGrantWelcomeBonus")
+  );
+
+  test("je to čistě SELECT (nic nemění) a ptá se přesně na welcome_bonus_granted_at", () => {
+    assert.ok(fn.length > 0, "funkce hasWelcomeBonus musí existovat");
+    assert.match(fn, /SELECT welcome_bonus_granted_at IS NOT NULL AS has_bonus/);
+    assert.match(fn, /FROM users\s+WHERE email = \$\{email\}/);
+    assert.doesNotMatch(fn, /INSERT|UPDATE|DELETE|BEGIN|COMMIT/);
+  });
+
+  test("vrací boolean (řádek neexistuje = false), nikdy nevyhazuje kvůli prázdnému výsledku", () => {
+    assert.match(fn, /return result\.rows\[0\]\?\.has_bonus === true;/);
+  });
+});

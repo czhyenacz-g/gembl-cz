@@ -1,5 +1,5 @@
 import "server-only";
-import { db } from "@vercel/postgres";
+import { db, sql } from "@vercel/postgres";
 
 // Jediné místo, kudy smí projít změna users.credits (viz zadání "Balance
 // nesmí jít pod nulu" + "Změna balance + vytvoření ledger záznamu musí
@@ -37,6 +37,24 @@ function isUniqueViolation(error: unknown): boolean {
  *    kdykoli v budoucnu jiný kód obešel (1), INSERT do ledgeru selže na
  *    unique_violation a transakce se celá vrátí zpět.
  */
+/**
+ * Jen čtení (žádný zápis): má tenhle e-mail už udělený uvítací bonus?
+ *
+ * Bonus je jednorázový na účet (viz findOrCreateUserAndGrantWelcomeBonus),
+ * takže podle tohohle příznaku se pozná, jestli vracejícímu se hráči
+ * přihlášením ještě něco reálně přijde — používá to magic-link route pro
+ * volbu textu e-mailu (neslibovat výhru, která se už neudělí). Čistě
+ * informativní dotaz, nikdy sám nic nemění.
+ */
+export async function hasWelcomeBonus(email: string): Promise<boolean> {
+  const result = await sql<{ has_bonus: boolean }>`
+    SELECT welcome_bonus_granted_at IS NOT NULL AS has_bonus
+    FROM users
+    WHERE email = ${email}
+  `;
+  return result.rows[0]?.has_bonus === true;
+}
+
 export async function findOrCreateUserAndGrantWelcomeBonus(
   email: string,
   amountG: number

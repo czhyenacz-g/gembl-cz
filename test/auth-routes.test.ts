@@ -31,7 +31,7 @@ describe("POST /api/auth/magic-link", () => {
   });
 
   test("úspěšné předání Resendu se loguje včetně message ID (dohledatelné, že e-mail opravdu odešel)", () => {
-    assert.match(magicLinkSource, /const \{ id \} = await sendMagicLinkEmail\(\{ to: email, loginUrl, welcomePrizeG: baseWelcomePrizeG \}\);/);
+    assert.match(magicLinkSource, /const \{ id \} = await sendMagicLinkEmail\(\{\s*to: email,\s*loginUrl,\s*welcomePrizeG: alreadyGranted \? undefined : baseWelcomePrizeG,\s*\}\);/);
     assert.match(magicLinkSource, /console\.log\(`POST \/api\/auth\/magic-link: e-mail předán Resendu \(id \$\{id\}\)\.`\);/);
   });
 
@@ -75,7 +75,10 @@ describe("POST /api/auth/magic-link", () => {
   test("stejná resolvnutá částka (baseWelcomePrizeG) jde na token I do e-mailu — text mailu se nesmí rozejít s tím, co se pak připíše", () => {
     assert.match(magicLinkSource, /const baseWelcomePrizeG = resolveBaseAmountG\(pendingPrizeFromCookie\);/);
     assert.match(magicLinkSource, /createMagicLinkToken\(email, baseWelcomePrizeG\)/);
-    assert.match(magicLinkSource, /sendMagicLinkEmail\(\{ to: email, loginUrl, welcomePrizeG: baseWelcomePrizeG \}\)/);
+    // Stejné číslo jde na token i do e-mailu; vracejícímu se hráči (bonus
+    // už udělen) se neposílá žádná částka, takže se text nemůže rozejít s
+    // tím, co se reálně připíše (nepřipíše se nic).
+    assert.match(magicLinkSource, /welcomePrizeG: alreadyGranted \? undefined : baseWelcomePrizeG,/);
   });
 });
 
@@ -142,5 +145,27 @@ describe("POST /api/wallet/spin", () => {
   test("nedostatek kreditů vrací 402, ne pád/500", () => {
     assert.match(spinSource, /error instanceof InsufficientCreditsError/);
     assert.match(spinSource, /status: 402/);
+  });
+});
+
+describe("POST /api/auth/magic-link — text e-mailu podle stavu účtu", () => {
+  test("vracejícímu se hráči (bonus už udělen) se posílá neutrální text bez slibované výhry", () => {
+    assert.match(magicLinkSource, /import \{ hasWelcomeBonus \} from "\.\.\/\.\.\/\.\.\/\.\.\/lib\/wallet\/ledger";/);
+    assert.match(magicLinkSource, /const alreadyGranted = await hasWelcomeBonus\(email\)\.catch\(\(error\) => \{/);
+    assert.match(magicLinkSource, /welcomePrizeG: alreadyGranted \? undefined : baseWelcomePrizeG,/);
+  });
+
+  test("kontrola stavu účtu je fail-open — když spadne, e-mail se pošle dál (jako dřív) a chyba se zaloguje", () => {
+    const catchBlock = /const alreadyGranted = await hasWelcomeBonus\(email\)\.catch\(\(error\) => \{[\s\S]*?\}\);/.exec(magicLinkSource)?.[0] ?? "";
+    assert.match(catchBlock, /console\.error\(/);
+    assert.match(catchBlock, /return false;/);
+  });
+
+  test("kontrola proběhne PŘED odesláním e-mailu (a nic nemění v odpovědi API)", () => {
+    const checkIndex = magicLinkSource.indexOf("await hasWelcomeBonus(email)");
+    const sendIndex = magicLinkSource.indexOf("await sendMagicLinkEmail(");
+    assert.ok(checkIndex !== -1 && sendIndex !== -1 && checkIndex < sendIndex);
+    // Odpověď zůstává generická, stav účtu se v ní neobjeví.
+    assert.match(magicLinkSource, /return NextResponse\.json\(\{ ok: true, message: GENERIC_MESSAGE \}\);/);
   });
 });
