@@ -135,7 +135,7 @@ záměrně stažen o 4 dB (peak **-7.4 dBFS**) — s peak-normalizací by působ
 | `popup_open` | Opona/karta + krátký sting | `public/audio/sfx/popup-open.mp3` | 648 ms | 10.8 kB | false |
 | `topup_open` | Pokladní zásuvka | `public/audio/sfx/topup-open.mp3` | 432 ms | 7.3 kB | false |
 | `shell_shuffle` | Dřevěné posuny kelímků | `public/audio/sfx/shell-shuffle.mp3` | 528 ms | 8.9 kB | false |
-| `scratch` | Stírání losu — **smyčka** (karton + náznak kovu) | `public/audio/sfx/scratch-loop.mp3` | 2.04 s | 33 kB | false (DOČASNÉ, viz níž) |
+| `scratch` | Stírání losu — **smyčka** (karton + náznak kovu) | `public/audio/sfx/scratch-loop.mp3` | 3.24 s | 52 kB | false (DOČASNÉ, viz níž) |
 | `devil_laugh` | Ďábelský smích (později) | — (soubor záměrně není) | — | — | **true** |
 
 ## Kde se které SFX hraje
@@ -174,9 +174,11 @@ záměrně stažen o 4 dB (peak **-7.4 dBFS**) — s peak-normalizací by působ
    `attributionRequired` v `tracks.ts` + tabulky výš.
 3. Volitelně: realističtější SFX nahrávky místo generovaných (viz úvod
    sekce SFX) — stačí nahradit soubory na stejných cestách.
-4. **`scratch` je označený jako DOČASNÝ** — je to in-house syntéza (drsný
-   karton + náznak kovu, středové pásmo 400–2000 Hz dominuje, žádný
-   white-noise hys), ne skutečná nahrávka škrábání. Až bude kvalitnější
+4. **`scratch` je označený jako DOČASNÝ** — je to in-house syntéza (karton
+   + velmi tichý náznak kovu; středové pásmo 300–2500 Hz dominuje −22 dB,
+   výšky 5–9 kHz jsou −38 dB, takže žádný hys), ne skutečná nahrávka
+   škrábání. Amplituda je NEPRAVIDELNÁ obálka z pomalého šumu (žádné
+   periodické tremolo — první verze s tremolem zněla jako vrtačka). Až bude kvalitnější
    reálný sample (krátký, bez ticha na konci, ideálně 1,5–2,5 s smyčka),
    stačí ho položit jako **`public/audio/sfx/scratch-loop.mp3`** (mono,
    48 kHz, peak ≈ −3 dBFS, konec crossfadovaný do začátku) — kód se měnit

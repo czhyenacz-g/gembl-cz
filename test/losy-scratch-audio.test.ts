@@ -74,6 +74,11 @@ describe("AudioProvider.tsx: smyčkové SFX (startSfxLoop/stopSfxLoop)", () => {
     assert.match(providerSource, /for \(const loopEl of sfxLoops\.values\(\)\) loopEl\.pause\(\);/);
   });
 
+  test("nový tah začíná na náhodném místě smyčky (míň znát opakování)", () => {
+    const startFn = /const startSfxLoop = useCallback\([\s\S]*?\n {2}\}, \[[^\]]*\]\);/.exec(providerSource)?.[0] ?? "";
+    assert.match(startFn, /if \(Number\.isFinite\(el\.duration\) && el\.duration > 0\) el\.currentTime = Math\.random\(\) \* el\.duration;/);
+  });
+
   test("opakované volání během pohybu smyčku nerestartuje (běží dál, žádné cvakání)", () => {
     const startFn = /const startSfxLoop = useCallback\([\s\S]*?\n {2}\}, \[[^\]]*\]\);/.exec(providerSource)?.[0] ?? "";
     assert.match(startFn, /if \(el\.paused\) \{/);

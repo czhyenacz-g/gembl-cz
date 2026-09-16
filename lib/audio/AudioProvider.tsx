@@ -171,6 +171,10 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
         const target = loopVolume(def);
         if (el.paused) {
           clearSfxLoopFade();
+          // Náhodný start uvnitř smyčky — nový tah nezačíná pořád na stejném
+          // místě vzorku, takže je míň poznat, že se smyčka opakuje.
+          // (`duration` je známá až po načtení metadat, proto guard.)
+          if (Number.isFinite(el.duration) && el.duration > 0) el.currentTime = Math.random() * el.duration;
           el.volume = 0;
           void el
             .play()
