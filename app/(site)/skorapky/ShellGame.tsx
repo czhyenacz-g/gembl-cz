@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CreditGateModal from "../../components/wallet/CreditGateModal";
@@ -12,6 +11,7 @@ import { generateShuffleSequence, pickRandomCup, pickRevealCup } from "../../../
 import { pickRandomShellMessage } from "../../../lib/skorapky/messages.ts";
 import type { CupIndex, ShellGamePhase, ShuffleStep } from "../../../lib/skorapky/types.ts";
 import { MIN_BET } from "../../config/site.ts";
+import ArtworkScene from "../../components/stage/ArtworkScene.tsx";
 import Cup from "./Cup.tsx";
 
 // Fixní sázka pro MVP (viz zadání "preferuji teď jednoduchost") — reuse
@@ -254,18 +254,14 @@ export default function ShellGame() {
           h1 zůstává jen pro SEO/accessibility, vizuálně skrytý. */}
       <h1 className="sr-only">Skořápky</h1>
 
-      <div
+      <ArtworkScene
+        src="/skins/skorapky/skorapky.webp"
+        alt="Skořápky — hrací stůl se třemi vyznačenými místy pro kelímky"
+        width={SCENE_WIDTH}
+        height={SCENE_HEIGHT}
+        loadingLabel="Připravujeme stůl…"
         className="relative mx-auto w-full max-w-[1600px] select-none"
-        style={{ aspectRatio: `${SCENE_WIDTH} / ${SCENE_HEIGHT}` }}
       >
-        <Image
-          src="/skins/skorapky/skorapky.webp"
-          alt="Skořápky — hrací stůl se třemi vyznačenými místy pro kelímky"
-          width={SCENE_WIDTH}
-          height={SCENE_HEIGHT}
-          priority
-          className="absolute inset-0 h-full w-full object-contain"
-        />
 
         {/* Zpět — reálný klikací overlay přesně nad vytištěnou šipkou. */}
         <Link
@@ -354,7 +350,7 @@ export default function ShellGame() {
             </button>
           )}
         </div>
-      </div>
+      </ArtworkScene>
 
       {showCreditGate && <CreditGateModal loggedIn={loggedIn} onClose={() => setShowCreditGate(false)} callbackUrl="/skorapky" />}
     </div>

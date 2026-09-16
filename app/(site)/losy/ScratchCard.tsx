@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CreditGateModal from "../../components/wallet/CreditGateModal";
@@ -12,6 +11,7 @@ import { generateScratchResult, SYMBOL_DISPLAY } from "../../../lib/losy/engine.
 import { pickScratchMessage } from "../../../lib/losy/messages.ts";
 import type { ScratchResult, ScratchTicketPhase } from "../../../lib/losy/types.ts";
 import { MIN_BET } from "../../config/site.ts";
+import ArtworkScene from "../../components/stage/ArtworkScene.tsx";
 import ScratchLayer from "./ScratchLayer.tsx";
 
 // Cena losu pro MVP (viz zadání "10 G") — reuse MIN_BET ze sdíleného
@@ -213,18 +213,14 @@ export default function ScratchCard() {
           h1 zůstává jen pro SEO/accessibility, vizuálně skrytý. */}
       <h1 className="sr-only">Online losy</h1>
 
-      <div
+      <ArtworkScene
+        src="/skins/losy/losy.webp"
+        alt="Online losy — hrací stůl se stíracím losem"
+        width={SCENE_WIDTH}
+        height={SCENE_HEIGHT}
+        loadingLabel="Připravujeme losy…"
         className="relative mx-auto w-full max-w-[1600px] select-none"
-        style={{ aspectRatio: `${SCENE_WIDTH} / ${SCENE_HEIGHT}` }}
       >
-        <Image
-          src="/skins/losy/losy.webp"
-          alt="Online losy — hrací stůl se stíracím losem"
-          width={SCENE_WIDTH}
-          height={SCENE_HEIGHT}
-          priority
-          className="absolute inset-0 h-full w-full object-contain"
-        />
 
         {/* Zpět — klikací overlay nad vytištěným "← ZPĚT". */}
         <Link
@@ -325,7 +321,7 @@ export default function ScratchCard() {
             </button>
           )}
         </div>
-      </div>
+      </ArtworkScene>
 
       {showCreditGate && <CreditGateModal loggedIn={loggedIn} onClose={() => setShowCreditGate(false)} callbackUrl="/losy" />}
     </div>

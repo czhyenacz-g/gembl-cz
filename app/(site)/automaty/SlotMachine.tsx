@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
@@ -17,6 +16,8 @@ import { BET_STEP, MAX_BET, MIN_BET } from "../../config/site";
 import { maxAffordableBet } from "../../../lib/wallet/bet";
 import type { CasinoSkin } from "../../../lib/casino-skins/index.ts";
 import { rectStyle } from "../../../lib/casino-skins/rect-style.ts";
+import ArtworkScene from "../../components/stage/ArtworkScene.tsx";
+import { useArtworkReady } from "../../components/stage/use-artwork-ready.ts";
 import AchievementToast from "./AchievementToast";
 import Reel from "./Reel";
 
@@ -41,6 +42,7 @@ const FLUSH_EVERY_N_SPINS = 10;
 // a JSX na konci komponenty). Válce zůstávají v obou režimech na artworku.
 const SCENE_WIDTH = 1536;
 const SCENE_HEIGHT = 1024;
+const SCENE_SRC = "/skins/automaty/automaty.webp";
 const BACK_RECT = { left: 20, top: 2.4, width: 7.6, height: 4.4 };
 const LOGO_RECT = { left: 68.7, top: 2.4, width: 7.5, height: 4.4 };
 /** Tři připravené světlé panely pro válce (středy x ~32 / 44,3 / 56,7 %). */
@@ -134,6 +136,12 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
   const setShowCreditGate = creditGate ? creditGate.onOpenChange : setLocalShowCreditGate;
   const toastKeyRef = useRef(0);
   const pendingStatsRef = useRef({ spins: 0, wagered: 0, won: 0 });
+  // Stejný zdroj pravdy jako ArtworkScene níž (embedded režim = žádný
+  // vlastní artwork → null, hned `ready`): dokud se scéna nenačte, držíme
+  // ovládání/statistiky inert, ať se na ně nedá omylem kliknout ani
+  // tabnout pod loaderem (na desktopu jsou to overlaye nad artworkem).
+  const artworkStatus = useArtworkReady(embedded ? null : SCENE_SRC);
+  const artworkLoading = artworkStatus === "loading";
 
   const loggedIn = session.status === "authenticated";
   const effectiveCredits = session.status === "authenticated" ? session.credits : player?.credits ?? null;
@@ -433,16 +441,14 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
           statistiky) skládají pod sebe; od `md` výš je to jen absolutní
           prostor, jehož výška = artwork (panely v něm sedí jako overlaye). */}
       <div className="relative mx-auto flex w-full max-w-[1600px] flex-col gap-3 select-none md:block md:gap-0">
-        <div className="relative w-full" style={{ aspectRatio: `${SCENE_WIDTH} / ${SCENE_HEIGHT}` }}>
-          <Image
-            src="/skins/automaty/automaty.webp"
-            alt="Automaty — hrací automat se třemi válci"
-            width={SCENE_WIDTH}
-            height={SCENE_HEIGHT}
-            priority
-            className="absolute inset-0 h-full w-full object-contain"
-          />
-
+        <ArtworkScene
+          src={SCENE_SRC}
+          alt="Automaty — hrací automat se třemi válci"
+          width={SCENE_WIDTH}
+          height={SCENE_HEIGHT}
+          loadingLabel="Spouštíme automat…"
+          className="relative w-full"
+        >
           {/* Zpět a logo GEMBL.CZ — klikací overlaye nad vytištěnými. */}
           <Link
             href="/casino"
@@ -463,7 +469,7 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
               <Reel symbol={reels ? reels[index] : null} spinning={spinning} />
             </div>
           ))}
-        </div>
+        </ArtworkScene>
 
         <div className="fixed right-4 top-20 z-50 flex flex-col gap-2 sm:top-24">
           {toasts.map((t) => (
@@ -473,8 +479,11 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
 
         {/* Ovládání sázky + spin. Na mobilu vlastní panel pod artworkem
             (obsah se vejde celý a čitelně), od `md` overlay do připravené
-            plochy pod válci. */}
+            plochy pod válci. Dokud se nenačte artwork, je panel `inert`
+            (nedá se na něj kliknout ani tabnout pod loaderem) — rozměry
+            zůstávají, takže žádný layout shift. */}
         <div
+          inert={artworkLoading || undefined}
           className={`${OVERLAY_POSITION} flex flex-col items-center justify-center gap-2 border-2 border-gembl-ink bg-gembl-paper-dark px-3 py-3 text-center md:gap-[clamp(2px,0.6vw,6px)] md:border-0 md:bg-transparent md:px-[2%] md:py-0`}
           style={overlayStyle(CONTROL_RECT)}
         >
@@ -546,6 +555,7 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
             (aby se omylem nekliklo během hraní) — má vlastní stránku /reset,
             viz app/(site)/reset/. */}
         <div
+          inert={artworkLoading || undefined}
           className={`${OVERLAY_POSITION} flex flex-col items-center justify-center gap-2 border-2 border-gembl-ink bg-gembl-paper-dark px-3 py-3 md:gap-[clamp(2px,0.8vw,8px)] md:border-0 md:bg-transparent md:px-[2%] md:py-0`}
           style={overlayStyle(STATS_RECT)}
         >

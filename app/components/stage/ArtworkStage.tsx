@@ -3,7 +3,9 @@
 import Image from "next/image";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { StageCanvas } from "../../../lib/casino-skins/index.ts";
+import ArtworkLoadingCover from "./ArtworkLoadingCover.tsx";
 import StageBackground from "./StageBackground.tsx";
+import { useArtworkReady } from "./use-artwork-ready.ts";
 
 // Referenční canvas = skutečné rozměry background obrázku (canvas.designWidth/
 // designHeight). Jediný scaling mechanismus v celé stage vrstvě: změř
@@ -26,9 +28,23 @@ import StageBackground from "./StageBackground.tsx";
 // Komponenta je záměrně obecná (`StageCanvas`): používá ji herní stage na
 // /casino (classicSkin) i společný obsahový stage informačních stránek
 // (classicSkin.universal) — viz app/components/stage/UniversalContentStage.tsx.
-export default function ArtworkStage({ canvas, children }: { canvas: StageCanvas; children: ReactNode }) {
+//
+// Overlay děti se navíc vykreslí, až když je hlavní background SKUTEČNĚ
+// načtený (use-artwork-ready.ts) — do té doby je přes celý stage retro
+// loader, takže se na pomalém připojení neukážou tlačítka/texty na prázdném
+// pozadí a nedají se omylem kliknout.
+export default function ArtworkStage({
+  canvas,
+  loadingLabel,
+  children,
+}: {
+  canvas: StageCanvas;
+  loadingLabel: string;
+  children: ReactNode;
+}) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
+  const status = useArtworkReady(canvas.background.src);
 
   useLayoutEffect(() => {
     const el = wrapperRef.current;
@@ -81,10 +97,14 @@ export default function ArtworkStage({ canvas, children }: { canvas: StageCanvas
               width={canvas.designWidth}
               height={canvas.designHeight}
             />
-            {children}
+            {status !== "loading" && <div className="animate-gembl-fade-in">{children}</div>}
           </div>
         </div>
       )}
+
+      {/* Loader/error krytí celého stage — musí být mimo transformovaný box,
+          aby se neškálovalo spolu s ním (a aby sedělo na wrapper). */}
+      <ArtworkLoadingCover status={status} label={loadingLabel} />
     </div>
   );
 }

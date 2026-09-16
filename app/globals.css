@@ -22,6 +22,48 @@
   animation: reel-spin 0.15s linear infinite;
 }
 
+/* Retro loading cover artwork stageu (viz
+ * app/components/stage/ArtworkLoadingCover.tsx) — tři tečky v rytmu, žádný
+ * moderní spinner. Čistě CSS, žádný GIF/video. */
+@keyframes gembl-loader-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.animate-loader-dot {
+  animation: gembl-loader-dot 1.2s ease-in-out infinite;
+}
+
+/* Jemné "doplutí" overlayů, když se stage odkrývá po načtení artworku
+ * (loader v tu chvíli zároveň mizí, viz ArtworkLoadingCover). */
+@keyframes gembl-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-gembl-fade-in {
+  animation: gembl-fade-in 280ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-loader-dot,
+  .animate-gembl-fade-in {
+    animation: none;
+  }
+}
+
 /* Skořápky shuffling — drobný shake (viz Cup.tsx), max pár px, žádné
    výrazné přesouvání (viz zadání "kelímky se fyzicky nepřehazují"). */
 @keyframes shell-shake {

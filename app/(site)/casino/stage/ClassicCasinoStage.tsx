@@ -67,7 +67,7 @@ export default function ClassicCasinoStage({
           artwork ("AUTOMATY" / "Těsně vedle."), ať se titulek nezdvojuje. */}
       <h1 className="sr-only">Automaty — Těsně vedle.</h1>
 
-      <ArtworkStage canvas={skin}>
+      <ArtworkStage canvas={skin} loadingLabel="Kasino se otevírá…">
         <Link
           href="/"
           style={rectStyle(skin.layout.logoHome)}

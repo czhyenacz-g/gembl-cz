@@ -29,7 +29,7 @@ export default function UniversalContentStage({
   children: ReactNode;
 }) {
   return (
-    <ArtworkStage canvas={stage}>
+    <ArtworkStage canvas={stage} loadingLabel="Připravujeme stůl…">
       {/* Zpět — deterministický link na /casino (ne history.back(), které by
           mohlo skončit mimo GEMBL). Text/šipka jsou vytištěné v artworku,
           takže overlay je jen průhledná klikací plocha + focus ring. */}

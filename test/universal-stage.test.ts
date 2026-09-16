@@ -83,7 +83,7 @@ describe("universal-background.webp — produkční asset", () => {
 describe("UniversalContentStage.tsx — artwork + živé overlaye", () => {
   test("reuse stejného scaling mechanismu jako /casino (ArtworkStage), ne druhý vlastní", () => {
     assert.match(stageSource, /import ArtworkStage from "\.\/ArtworkStage\.tsx";/);
-    assert.match(stageSource, /<ArtworkStage canvas=\{stage\}>/);
+    assert.match(stageSource, /<ArtworkStage canvas=\{stage\} loadingLabel=/);
     assert.match(stageSource, /rectStyle\(stage\.layout\.back\)/);
     assert.match(stageSource, /rectStyle\(stage\.layout\.panel\)/);
   });
@@ -192,10 +192,10 @@ describe("Žebříčky — žádná fake data", () => {
 describe("ArtworkStage — jedna sdílená scaling vrstva pro oba stage", () => {
   test("je obecný (StageCanvas) a používá ho i /casino", () => {
     assert.match(artworkStageSource, /import type \{ StageCanvas \} from "\.\.\/\.\.\/\.\.\/lib\/casino-skins\/index\.ts";/);
-    assert.match(artworkStageSource, /export default function ArtworkStage\(\{ canvas, children \}: \{ canvas: StageCanvas; children: ReactNode \}\)/);
+    assert.match(artworkStageSource, /export default function ArtworkStage\(\{\s*canvas,\s*loadingLabel,\s*children,\s*\}: \{\s*canvas: StageCanvas;\s*loadingLabel: string;\s*children: ReactNode;\s*\}\)/);
     assert.match(artworkStageSource, /setScale\(width \/ canvas\.designWidth\)/);
     const classicStage = read("../app/(site)/casino/stage/ClassicCasinoStage.tsx");
     assert.match(classicStage, /import ArtworkStage from "\.\.\/\.\.\/\.\.\/components\/stage\/ArtworkStage\.tsx";/);
-    assert.match(classicStage, /<ArtworkStage canvas=\{skin\}>/);
+    assert.match(classicStage, /<ArtworkStage canvas=\{skin\} loadingLabel=/);
   });
 });
