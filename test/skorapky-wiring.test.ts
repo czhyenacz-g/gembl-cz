@@ -170,3 +170,23 @@ describe("animace míchání kelímků (globals.css)", () => {
     assert.match(css, /\.animate-shell-shake \{\s*animation: shell-shake 0\.15s ease-in-out infinite;\s*\}/);
   });
 });
+
+describe("ovládací štítky na artworku (čitelnost)", () => {
+  const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
+
+  for (const [label, rel] of [
+    ["/skorapky", "../app/(site)/skorapky/ShellGame.tsx"],
+    ["/losy", "../app/(site)/losy/ScratchCard.tsx"],
+  ] as const) {
+    test(`${label}: štítky sázka/cena/zůstatek mají světlé pozadí (ne průhledné přes tmavý stůl)`, () => {
+      const source = read(rel);
+      // Každý štítek gembl-tag v ovládání musí mít i světlé pozadí (gembl-tag sám
+      // je jen rámeček) — jinak je text na vytištěném stole nečitelný.
+      const tags = source.match(/className="gembl-tag [^"]*"/g) ?? [];
+      assert.ok(tags.length >= 3, `${label}: očekávány aspoň 3 štítky, nalezeno ${tags.length}`);
+      for (const tag of tags) {
+        assert.match(tag, /bg-gembl-paper/, `${label}: štítek bez světlého pozadí: ${tag}`);
+      }
+    });
+  }
+});

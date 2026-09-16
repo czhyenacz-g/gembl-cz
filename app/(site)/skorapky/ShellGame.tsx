@@ -313,7 +313,7 @@ export default function ShellGame() {
             nepřekryje se zvednutými kelímky; na desktopu je posunutý výš,
             ať neleží přes spodní titulek artworku). */}
         <div className="absolute left-1/2 top-[84%] z-10 flex w-[92%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-2 sm:gap-3">
-          <span className="gembl-tag text-[0.65rem] sm:text-sm">
+          <span className="gembl-tag bg-gembl-paper shadow-hard-sm text-[0.65rem] sm:text-sm">
             Sázka: <strong className="font-mono font-semibold text-gembl-ink">{BET} G</strong>
           </span>
 
@@ -338,7 +338,7 @@ export default function ShellGame() {
             </button>
           )}
 
-          <span className="gembl-tag text-[0.65rem] sm:text-sm">
+          <span className="gembl-tag bg-gembl-paper shadow-hard-sm text-[0.65rem] sm:text-sm">
             Zůstatek: <strong className="font-mono font-semibold text-gembl-ink">{displayCredits.toLocaleString("cs-CZ")} G</strong>
           </span>
 
@@ -346,7 +346,7 @@ export default function ShellGame() {
             <button
               type="button"
               onClick={() => setShowCreditGate(true)}
-              className="gembl-tag text-[0.65rem] font-semibold text-gembl-red sm:text-sm"
+              className="gembl-tag bg-gembl-paper shadow-hard-sm text-[0.65rem] font-semibold text-gembl-red sm:text-sm"
             >
               {loggedIn ? "Nemáš dost kreditů. Dobij G." : "Nemáš dost kreditů. Přihlas se a dobij G."}
             </button>

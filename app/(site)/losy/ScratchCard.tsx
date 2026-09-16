@@ -274,7 +274,7 @@ export default function ScratchCard() {
 
         {/* Ovládání + cena/zůstatek */}
         <div className="absolute left-1/2 top-[88%] z-10 flex w-[92%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-2 sm:top-[80%] sm:gap-3">
-          <span className="gembl-tag text-[0.65rem] sm:text-sm">
+          <span className="gembl-tag bg-gembl-paper shadow-hard-sm text-[0.65rem] sm:text-sm">
             Cena: <strong className="font-mono font-semibold text-gembl-ink">{TICKET_PRICE} G</strong>
           </span>
 
@@ -309,7 +309,7 @@ export default function ScratchCard() {
             </button>
           )}
 
-          <span className="gembl-tag text-[0.65rem] sm:text-sm">
+          <span className="gembl-tag bg-gembl-paper shadow-hard-sm text-[0.65rem] sm:text-sm">
             Zůstatek:{" "}
             <strong className="font-mono font-semibold text-gembl-ink">{displayCredits.toLocaleString("cs-CZ")} G</strong>
           </span>
@@ -318,7 +318,7 @@ export default function ScratchCard() {
             <button
               type="button"
               onClick={() => setShowCreditGate(true)}
-              className="gembl-tag text-[0.65rem] font-semibold text-gembl-red sm:text-sm"
+              className="gembl-tag bg-gembl-paper shadow-hard-sm text-[0.65rem] font-semibold text-gembl-red sm:text-sm"
             >
               {loggedIn ? "Nemáš dost kreditů. Dobij G." : "Nemáš dost kreditů. Přihlas se a dobij G."}
             </button>
