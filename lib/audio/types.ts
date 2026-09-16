@@ -43,6 +43,17 @@ export type SfxDefinition = {
   src: string;
   /** true = soubor na `src` zatím fyzicky neexistuje v public/ (viz docs/audio-assets.md). */
   placeholder: boolean;
+  /**
+   * true = SMYČKOVÝ efekt (např. scratch během stírání losu) — nepřehrává se
+   * jako one-shot, ale přes `startSfxLoop`/`stopSfxLoop`, dokud trvá
+   * interakce. Soubor musí být seamless smyčka (viz docs/audio-assets.md).
+   */
+  loop?: boolean;
+  /**
+   * Násobek `volumeSfx` pro smyčkové efekty — scratch má být slyšet, ale
+   * nesmí být nepříjemný (efektivně ~0.35–0.45 při výchozím volumeSfx 0.5).
+   */
+  loopVolumeScale?: number;
 };
 
 export type AudioPreferences = {

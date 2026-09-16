@@ -65,6 +65,9 @@ export default function ScratchCard() {
   const [ticketResult, setTicketResult] = useState<ScratchResult | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [roundKey, setRoundKey] = useState(0);
+  // Indexy symbolů, které už jsou setřené dost na to, aby byly celé vidět —
+  // pouští se na ně jednorázový zoom-pop (čistě vizuální, viz SYMBOL_CELLS).
+  const [poppedSymbols, setPoppedSymbols] = useState<readonly number[]>([]);
   const [showCreditGate, setShowCreditGate] = useState(false);
 
   // Refy pro anti-race (stejný vzor jako ShellGame.tsx) — zapsané
@@ -108,13 +111,13 @@ export default function ScratchCard() {
   function startScratching() {
     setTicketResult(generateScratchResult());
     setResultMessage(null);
+    setPoppedSymbols([]);
     // Nový `key` = ScratchLayer se mountne jako ÚPLNĚ nová instance
     // (čerstvý canvas), ne ruční reset předchozího stavu.
     setRoundKey((key) => key + 1);
     setPhase("scratching");
-    // Papírové/mincové škrábání — jednou na začátku stírání (ne v loopu,
-    // ať to nezešílí, viz zadání "krátké a fyzické").
-    playSfx("scratch");
+    // Scratch zvuk (kontinuální smyčka) řeší ScratchLayer.tsx podle
+    // skutečného pohybu prstu/myši — tady se záměrně nepřehrává nic.
   }
 
   async function purchaseAndStart() {
@@ -187,6 +190,14 @@ export default function ScratchCard() {
     }, REVEAL_FADE_MS + REVEAL_RESULT_DELAY_MS);
   }
 
+  // Zavolá ScratchLayer.tsx ve chvíli, kdy je některá třetina (symbol)
+  // setřená dost na to, aby byl symbol celý vidět. Jen přidá index do
+  // seznamu "popnutých" — CSS animace se přehraje jednou a sama skončí.
+  // Na herní logiku to nemá vliv (výsledek je daný od nákupu losu).
+  function handleSymbolRevealed(index: number) {
+    setPoppedSymbols((current) => (current.includes(index) ? current : [...current, index]));
+  }
+
   function handleBuyAnother() {
     if (timeoutRef.current !== null) {
       window.clearTimeout(timeoutRef.current);
@@ -246,7 +257,14 @@ export default function ScratchCard() {
         <div className="absolute z-10 overflow-hidden" style={pct(CARD_RECT)}>
           <div className="flex h-full items-center justify-center gap-[8%] text-[clamp(2rem,4.5vw,4rem)]">
             {ticketResult?.symbols.map((symbol, index) => (
-              <span key={index}>{SYMBOL_DISPLAY[symbol]}</span>
+              // `inline-block` je potřeba, aby se na span dal aplikovat
+              // transform (scale) v CSS animaci pop efektu.
+              <span
+                key={index}
+                className={`inline-block ${poppedSymbols.includes(index) ? "animate-symbol-pop" : ""}`}
+              >
+                {SYMBOL_DISPLAY[symbol]}
+              </span>
             ))}
           </div>
           {(phase === "scratching" || phase === "revealing") && (
@@ -255,6 +273,7 @@ export default function ScratchCard() {
               active={phase === "scratching"}
               fading={phase === "revealing"}
               onThresholdReached={handleThresholdReached}
+              onSymbolRevealed={handleSymbolRevealed}
             />
           )}
         </div>

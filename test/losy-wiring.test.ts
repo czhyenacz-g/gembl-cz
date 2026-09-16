@@ -137,7 +137,7 @@ describe("ScratchLayer.tsx — canvas stírací vrstva", () => {
   test("progress se počítá throttlovaně (jen každý N-tý pointermove), přes measureScratchedRatio z lib/losy/scratch-sampling.ts", () => {
     assert.match(
       layerSource,
-      /import \{ isScratchThresholdReached, measureScratchedRatio \} from "\.\.\/\.\.\/\.\.\/lib\/losy\/scratch-sampling\.ts"/
+      /import \{\s*isScratchThresholdReached,\s*measureScratchedRatio,\s*SYMBOL_CELLS,\s*SYMBOL_REVEAL_RATIO,\s*\} from "\.\.\/\.\.\/\.\.\/lib\/losy\/scratch-sampling\.ts"/
     );
     assert.match(layerSource, /moveCountRef\.current % PROGRESS_CHECK_EVERY_N_MOVES === 0/);
   });

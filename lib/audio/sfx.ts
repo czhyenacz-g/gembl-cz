@@ -25,7 +25,17 @@ export const SFX_REGISTRY: Record<SfxId, SfxDefinition> = {
   popup_open: { id: "popup_open", title: "Otevření popupu (swish + sting)", src: "/audio/sfx/popup-open.mp3", placeholder: false },
   topup_open: { id: "topup_open", title: "Otevření dobití (pokladna)", src: "/audio/sfx/topup-open.mp3", placeholder: false },
   shell_shuffle: { id: "shell_shuffle", title: "Míchání kelímků", src: "/audio/sfx/shell-shuffle.mp3", placeholder: false },
-  scratch: { id: "scratch", title: "Stírání losu", src: "/audio/sfx/scratch.mp3", placeholder: false },
+  // Smyčkový efekt (loop: true) — hraje se jen po dobu aktivního stírání
+  // (viz ScratchLayer.tsx), ne jako one-shot. Dočasně in-house syntéza
+  // (drsný karton/kov), viz docs/audio-assets.md → "co dodat ručně".
+  scratch: {
+    id: "scratch",
+    title: "Stírání losu (smyčka)",
+    src: "/audio/sfx/scratch-loop.mp3",
+    placeholder: false,
+    loop: true,
+    loopVolumeScale: 0.8,
+  },
   // Placeholder — asset záměrně není hotový (viz zadání "později pro čerta").
   devil_laugh: { id: "devil_laugh", title: "Ďábelský smích (později)", src: "/audio/sfx/devil-laugh.mp3", placeholder: true },
 };

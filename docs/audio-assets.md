@@ -115,6 +115,10 @@ chtít uživatel realističtější, stačí soubor na stejné cestě nahradit
 (délka/charakter by měly zůstat podobné, viz tabulka).
 
 Formát: mono MP3 128 kbps, 48 kHz, peak-normalizované na **-3 dBFS**.
+Většina efektů je one-shot (`playSfx`). Efekty označené `loop: true`
+(`scratch`) se přehrávají přes `startSfxLoop`/`stopSfxLoop` — běží, dokud
+trvá interakce, a musí to být **seamless smyčka** (konec crossfadovaný do
+začátku, ať na loop pointu nevzniká mezera ani cvaknutí).
 Jediná výjimka je `near_miss`: je to tónový sting (ne perkuse), takže byl
 záměrně stažen o 4 dB (peak **-7.4 dBFS**) — s peak-normalizací by působil
 řádově hlasitěji než ostatní efekty a přehlušoval hudbu.
@@ -131,7 +135,7 @@ záměrně stažen o 4 dB (peak **-7.4 dBFS**) — s peak-normalizací by působ
 | `popup_open` | Opona/karta + krátký sting | `public/audio/sfx/popup-open.mp3` | 648 ms | 10.8 kB | false |
 | `topup_open` | Pokladní zásuvka | `public/audio/sfx/topup-open.mp3` | 432 ms | 7.3 kB | false |
 | `shell_shuffle` | Dřevěné posuny kelímků | `public/audio/sfx/shell-shuffle.mp3` | 528 ms | 8.9 kB | false |
-| `scratch` | Papír/mince při stírání losu | `public/audio/sfx/scratch.mp3` | 456 ms | 7.7 kB | false |
+| `scratch` | Stírání losu — **smyčka** (karton + náznak kovu) | `public/audio/sfx/scratch-loop.mp3` | 2.04 s | 33 kB | false (DOČASNÉ, viz níž) |
 | `devil_laugh` | Ďábelský smích (později) | — (soubor záměrně není) | — | — | **true** |
 
 ## Kde se které SFX hraje
@@ -150,7 +154,7 @@ záměrně stažen o 4 dB (peak **-7.4 dBFS**) — s peak-normalizací by působ
 | Reveal kuličky | `spin_stop` | `ShellGame.tsx` (handleSelectCup) |
 | Prohra (skořápky) | `lose` | `ShellGame.tsx` (handleSelectCup) |
 | Koupě losu | `ui_click` | `ScratchCard.tsx` (handleBuy) |
-| Stírání losu | `scratch` | `ScratchCard.tsx` (startScratching) |
+| Stírání losu (jen při skutečném pohybu) | `scratch` (smyčka, `startSfxLoop`/`stopSfxLoop`) | `ScratchLayer.tsx` |
 | Dokončení odhalení | `spin_stop` | `ScratchCard.tsx` (handleThresholdReached) |
 | Prohra (losy) | `lose` | `ScratchCard.tsx` (handleThresholdReached) |
 | Otevření welcome popupu | `popup_open` | `WelcomePrizeModal.tsx` (mount) |
@@ -170,6 +174,13 @@ záměrně stažen o 4 dB (peak **-7.4 dBFS**) — s peak-normalizací by působ
    `attributionRequired` v `tracks.ts` + tabulky výš.
 3. Volitelně: realističtější SFX nahrávky místo generovaných (viz úvod
    sekce SFX) — stačí nahradit soubory na stejných cestách.
+4. **`scratch` je označený jako DOČASNÝ** — je to in-house syntéza (drsný
+   karton + náznak kovu, středové pásmo 400–2000 Hz dominuje, žádný
+   white-noise hys), ne skutečná nahrávka škrábání. Až bude kvalitnější
+   reálný sample (krátký, bez ticha na konci, ideálně 1,5–2,5 s smyčka),
+   stačí ho položit jako **`public/audio/sfx/scratch-loop.mp3`** (mono,
+   48 kHz, peak ≈ −3 dBFS, konec crossfadovaný do začátku) — kód se měnit
+   nemusí, cesta i `loop: true` v `lib/audio/sfx.ts` už jsou nastavené.
 
 ## Checklist před přidáním nového souboru
 

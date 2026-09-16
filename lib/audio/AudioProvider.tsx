@@ -16,6 +16,10 @@ import type { AudioPreferences, MusicPlaylistId, SfxId } from "./types.ts";
 // slyšitelného prasknutí, což zadání výslovně povoluje jako fallback.
 const TRACK_FADE_MS = 800;
 const FADE_STEP_MS = 40;
+// Smyčkové SFX (scratch) — krátký fade na startu/konci, ať to necvakne;
+// reakce musí být rychlá (zvuk jde rukou), takže desítky ms, ne stovky.
+const SFX_LOOP_FADE_IN_MS = 60;
+const SFX_LOOP_FADE_OUT_MS = 120;
 
 type AudioContextValue = {
   /** false, dokud se preference nenačetly z localStorage (SSR/první frame) — ovládání se do té doby neukazuje. */
@@ -27,6 +31,10 @@ type AudioContextValue = {
   toggleMuted: () => void;
   /** Přehraje jeden SFX podle id z SFX_REGISTRY — no-op když jsou efekty vypnuté, soubor chybí, nebo mimo AudioProvider. */
   playSfx: (id: SfxId) => void;
+  /** Spustí SMYČKOVÝ SFX (viz SfxDefinition.loop, např. scratch) — no-op při vypnutých efektech/chybějícím souboru/one-shot id. */
+  startSfxLoop: (id: SfxId) => void;
+  /** Zastaví smyčkový SFX s krátkým fade-outem (ne useknutí uprostřed vzorku). */
+  stopSfxLoop: (id: SfxId) => void;
 };
 
 // Výchozí (no-op) hodnota kontextu — komponenty jako SlotMachine.tsx sdílí
@@ -39,6 +47,8 @@ const noopContextValue: AudioContextValue = {
   preferences: DEFAULT_AUDIO_PREFERENCES,
   toggleMuted: () => {},
   playSfx: () => {},
+  startSfxLoop: () => {},
+  stopSfxLoop: () => {},
 };
 
 const AudioCtx = createContext<AudioContextValue>(noopContextValue);
@@ -94,6 +104,10 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
   const fadeIntervalRef = useRef<number | null>(null);
   const fadingOutRef = useRef(false);
   const sfxElsRef = useRef<Map<SfxId, HTMLAudioElement>>(new Map());
+  // Smyčkové SFX mají vlastní elementy i vlastní fade rampu — nesmí si
+  // krást tu hudební (ta má jediný `fadeIntervalRef`, viz fadeVolumeTo).
+  const sfxLoopElsRef = useRef<Map<SfxId, HTMLAudioElement>>(new Map());
+  const sfxLoopFadeRef = useRef<number | null>(null);
 
   const clearFade = useCallback(() => {
     if (fadeIntervalRef.current !== null) {
@@ -101,6 +115,103 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
       fadeIntervalRef.current = null;
     }
   }, []);
+
+  const clearSfxLoopFade = useCallback(() => {
+    if (sfxLoopFadeRef.current !== null) {
+      window.clearInterval(sfxLoopFadeRef.current);
+      sfxLoopFadeRef.current = null;
+    }
+  }, []);
+
+  // Stejný lineární ramp jako u hudby, ale s vlastním interval refem (viz
+  // komentář u sfxLoopFadeRef) — smyčka se nesmí hádat s fade hudby.
+  const fadeSfxLoopTo = useCallback(
+    (el: HTMLAudioElement, target: number, durationMs: number, onDone?: () => void) => {
+      clearSfxLoopFade();
+      const start = el.volume;
+      const startedAt = Date.now();
+      sfxLoopFadeRef.current = window.setInterval(() => {
+        const progress = Math.min(1, (Date.now() - startedAt) / durationMs);
+        el.volume = start + (target - start) * progress;
+        if (progress >= 1) {
+          clearSfxLoopFade();
+          onDone?.();
+        }
+      }, FADE_STEP_MS);
+    },
+    [clearSfxLoopFade]
+  );
+
+  const loopVolume = useCallback((def: { loopVolumeScale?: number }) => {
+    return preferencesRef.current.volumeSfx * (def.loopVolumeScale ?? 1);
+  }, []);
+
+  /**
+   * Smyčkový SFX (viz SfxDefinition.loop) — používá ho scratch při stírání
+   * losu. Opakované volání během pokračujícího pohybu je no-op (smyčka už
+   * běží), takže volající může hlásit aktivitu klidně na každý pointermove.
+   * Nikdy nevyhodí chybu do volajícího (stejná fail-safe jako playSfx).
+   */
+  const startSfxLoop = useCallback(
+    (id: SfxId) => {
+      if (!preferencesRef.current.sfxEnabled) return;
+      if (typeof Audio === "undefined") return;
+      try {
+        const def = SFX_REGISTRY[id];
+        if (!def?.loop) return;
+
+        let el = sfxLoopElsRef.current.get(id);
+        if (!el) {
+          el = new Audio(def.src);
+          el.loop = true;
+          el.preload = "auto";
+          sfxLoopElsRef.current.set(id, el);
+        }
+
+        const target = loopVolume(def);
+        if (el.paused) {
+          clearSfxLoopFade();
+          el.volume = 0;
+          void el
+            .play()
+            .then(() => fadeSfxLoopTo(el, target, SFX_LOOP_FADE_IN_MS))
+            .catch(() => {
+              // Autoplay blokovaný / soubor chybí — tiše nic.
+            });
+        } else {
+          clearSfxLoopFade();
+          el.volume = target;
+        }
+      } catch {
+        // Smyčka je čistě prezentační — nikdy nesmí ovlivnit hru.
+      }
+    },
+    [clearSfxLoopFade, fadeSfxLoopTo, loopVolume]
+  );
+
+  const stopSfxLoop = useCallback(
+    (id: SfxId) => {
+      const el = sfxLoopElsRef.current.get(id);
+      if (!el || el.paused) return;
+      fadeSfxLoopTo(el, 0, SFX_LOOP_FADE_OUT_MS, () => el.pause());
+    },
+    [fadeSfxLoopTo]
+  );
+
+  // Vypnutí efektů musí utnout i běžící smyčku (jinak by scratch dozníval
+  // dál i po "vypnout zvuk").
+  useEffect(() => {
+    if (preferences.sfxEnabled) return;
+    for (const id of sfxLoopElsRef.current.keys()) stopSfxLoop(id);
+  }, [preferences.sfxEnabled, stopSfxLoop]);
+
+  // Změna hlasitosti efektů se promítne i do běžící smyčky.
+  useEffect(() => {
+    for (const [id, el] of sfxLoopElsRef.current) {
+      const def = SFX_REGISTRY[id];
+      if (def?.loop) el.volume = preferences.volumeSfx * (def.loopVolumeScale ?? 1);
+    }
+  }, [preferences.volumeSfx]);
 
   // Lineární ramp hlasitosti právě hrajícího elementu k `target` za
   // `durationMs` — používá se pro fade-out konce tracku i fade-in nového
@@ -239,6 +350,7 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
     // sama Map (referenci drží tenhle `const`) se za dobu života providera
     // nemění, viz sfxElsRef inicializace přes useRef(new Map()) výš.
     const sfxEls = sfxElsRef.current;
+    const sfxLoops = sfxLoopElsRef.current;
 
     return () => {
       el.pause();
@@ -253,8 +365,12 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
       // /casino hudbu zastav").
       for (const sfxEl of sfxEls.values()) sfxEl.pause();
       sfxEls.clear();
+      // Smyčkové efekty taky utnout (jinak by scratch dozníval po odchodu ze stránky).
+      clearSfxLoopFade();
+      for (const loopEl of sfxLoops.values()) loopEl.pause();
+      sfxLoops.clear();
     };
-  }, [handleTrackEnded, handleTrackError, handleTimeUpdate, clearFade]);
+  }, [handleTrackEnded, handleTrackError, handleTimeUpdate, clearFade, clearSfxLoopFade]);
 
   // Drží hudbu v souladu s (mounted, musicEnabled, aktuální playlist):
   // - route bez playlistu nebo vypnutá hudba → fade-out a ticho,
@@ -371,8 +487,10 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
       preferences,
       toggleMuted,
       playSfx,
+      startSfxLoop,
+      stopSfxLoop,
     }),
-    [mounted, preferences, toggleMuted, playSfx]
+    [mounted, preferences, toggleMuted, playSfx, startSfxLoop, stopSfxLoop]
   );
 
   return <AudioCtx.Provider value={value}>{children}</AudioCtx.Provider>;

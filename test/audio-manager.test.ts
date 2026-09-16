@@ -441,14 +441,18 @@ describe("ShellGame.tsx: SFX míchání a výběru kelímku", () => {
 describe("ScratchCard.tsx: SFX koupě a stírání losu", () => {
   const source = readFileSync(fileURLToPath(new URL("../app/(site)/losy/ScratchCard.tsx", import.meta.url)), "utf8");
 
-  test("koupě losu hraje ui_click, stírání scratch, reveal spin_stop, prohra lose", () => {
+  test("koupě losu hraje ui_click, reveal spin_stop, prohra lose", () => {
     const buyFn = /function handleBuy\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
-    const scratchFn = /function startScratching\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
     const thresholdFn = /function handleThresholdReached\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
     assert.match(buyFn, /playSfx\("ui_click"\)/);
-    assert.match(scratchFn, /playSfx\("scratch"\)/);
     assert.match(thresholdFn, /playSfx\("spin_stop"\)/);
     assert.match(thresholdFn, /playSfx\("lose"\)/);
+  });
+
+  test("stírání NEhraje one-shot scratch — kontinuální smyčku řídí ScratchLayer podle pohybu", () => {
+    const scratchFn = /function startScratching\(\)[\s\S]*?\n {2}\}\n/.exec(source)?.[0] ?? "";
+    assert.doesNotMatch(scratchFn, /playSfx\(/);
+    assert.doesNotMatch(source, /playSfx\("scratch"\)/);
   });
 });
 

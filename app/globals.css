@@ -42,6 +42,27 @@
   animation: gembl-loader-dot 1.2s ease-in-out infinite;
 }
 
+/* /losy — "pop" symbolu ve chvíli, kdy je setřený celý (zoom-in a zpět na
+ * původní velikost). Čistě vizuální odměna za stírání, viz ScratchCard.tsx. */
+@keyframes gembl-symbol-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.35);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-symbol-pop {
+  animation: gembl-symbol-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 /* Jemné "doplutí" overlayů, když se stage odkrývá po načtení artworku
  * (loader v tu chvíli zároveň mizí, viz ArtworkLoadingCover). */
 @keyframes gembl-fade-in {
@@ -59,7 +80,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-loader-dot,
-  .animate-gembl-fade-in {
+  .animate-gembl-fade-in,
+  .animate-symbol-pop {
     animation: none;
   }
 }
