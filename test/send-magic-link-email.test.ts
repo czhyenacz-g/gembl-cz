@@ -1,6 +1,40 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { buildMagicLinkEmailContent } from "../lib/auth/send-magic-link-email.ts";
+
+const senderSource = readFileSync(fileURLToPath(new URL("../lib/auth/send-magic-link-email.ts", import.meta.url)), "utf8");
+const loginModalSource = readFileSync(
+  fileURLToPath(new URL("../app/components/auth/LoginModal.tsx", import.meta.url)),
+  "utf8"
+);
+
+describe("sendMagicLinkEmail — chyba se nesmí spolknout a musí vrátit message ID", () => {
+  test("Resend chyba se vyhodí (nezůstane tichý úspěch) a úspěch vrací id zprávy", () => {
+    assert.match(senderSource, /const \{ data, error \} = await resend\.emails\.send\(\{/);
+    assert.match(senderSource, /if \(error\) throw new Error\(`Resend selhal: \$\{error\.message\}`\);/);
+    assert.match(senderSource, /return \{ id: data\?\.id \?\? "neznámé" \};/);
+    assert.match(senderSource, /Promise<\{ id: string \}>/);
+  });
+
+  test("bez RESEND_API_KEY se taky vyhazuje chyba (žádné tiché přeskočení)", () => {
+    assert.match(senderSource, /if \(!apiKey\) throw new Error\("RESEND_API_KEY není nastavený\."\);/);
+  });
+});
+
+describe("LoginModal — technické selhání se nesmí tvářit jako odesláno", () => {
+  test("odpověď se kontroluje (response.ok) a při chybě se zobrazí výzva zkusit znovu", () => {
+    assert.match(loginModalSource, /const response = await fetch\("\/api\/auth\/magic-link", \{/);
+    assert.match(loginModalSource, /if \(!response\.ok\) \{\s*setStatus\("error"\);\s*return;\s*\}/);
+    assert.match(loginModalSource, /Přihlašovací email se teď nepodařilo odeslat\. Zkus to prosím znovu\./);
+  });
+
+  test("technický detail se uživateli nikdy nezobrazuje (žádná Resend/DB zpráva v UI)", () => {
+    assert.doesNotMatch(loginModalSource, /Resend|resend/);
+    assert.doesNotMatch(loginModalSource, /response\.status|statusText/);
+  });
+});
 
 describe("buildMagicLinkEmailContent", () => {
   test("s welcomePrizeG ukazuje ZÁKLADNÍ (nezdvojenou) částku v předmětu i těle, nikde neprozrazuje interní ×2", () => {

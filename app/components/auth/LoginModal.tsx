@@ -23,11 +23,19 @@ export default function LoginModal({
     if (status === "sending") return;
     setStatus("sending");
     try {
-      await fetch("/api/auth/magic-link", {
+      const response = await fetch("/api/auth/magic-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, callbackUrl }),
       });
+      // 200 = obecná odpověď (i pro neplatný/rate-limitovaný e-mail, ať se
+      // nedá zjišťovat existence účtu) → hlásíme "poslali jsme odkaz".
+      // Cokoli jiného = skutečné technické selhání odeslání → poctivá
+      // výzva zkusit to znovu (viz POST /api/auth/magic-link, 502).
+      if (!response.ok) {
+        setStatus("error");
+        return;
+      }
       setStatus("sent");
     } catch {
       setStatus("error");
@@ -68,7 +76,11 @@ export default function LoginModal({
             {status === "sending" ? "Odesílám…" : "Poslat přihlašovací odkaz"}
           </button>
           <p className="text-xs text-gembl-muted">Pošleme ti jednorázový přihlašovací odkaz. Žádné heslo nepotřebuješ.</p>
-          {status === "error" && <p className="text-xs font-semibold text-gembl-red">Něco se nepovedlo, zkus to prosím znovu.</p>}
+          {status === "error" && (
+            <p className="text-xs font-semibold text-gembl-red">
+              Přihlašovací email se teď nepodařilo odeslat. Zkus to prosím znovu.
+            </p>
+          )}
         </form>
       )}
     </ModalShell>

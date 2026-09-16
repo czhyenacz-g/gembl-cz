@@ -8,9 +8,16 @@ import { sendMagicLinkEmail } from "../../../../lib/auth/send-magic-link-email";
 import { getSiteUrl } from "../../../../lib/site-url";
 import { PENDING_PRIZE_COOKIE_NAME, resolveBaseAmountG, verifyPendingPrizeCookieValue } from "../../../../lib/onboarding/welcome-prize";
 
-// Odpověď je VŽDY stejná bez ohledu na to, jestli email existuje, má
-// platný tvar, nebo jestli odeslání e-mailu uvnitř selhalo — viz zadání
-// "neprozrazuj zbytečně, zda email v databázi existuje".
+// Odpověď je stejná bez ohledu na to, jestli email existuje, má platný
+// tvar, nebo jestli nás zastavil rate limit — viz zadání "neprozrazuj
+// zbytečně, zda email v databázi existuje".
+//
+// JEDINÁ výjimka je technické selhání (DB/Resend) → 502, aby frontend mohl
+// poctivě říct "e-mail se nepodařilo odeslat, zkuste to znovu" místo
+// falešného úspěchu (přesně tenhle tichý scénář dřív schoval i chybu
+// "Resend: můžete posílat jen na svou adresu"). O existenci účtu to nic
+// neprozrazuje — odeslání se zkouší VŽDY, bez ohledu na to, jestli účet
+// existuje.
 const GENERIC_MESSAGE = "Pokud je možné tento email použít, poslali jsme na něj přihlašovací odkaz.";
 
 const EMAIL_LIMIT = 5;
@@ -57,17 +64,28 @@ export async function POST(request: Request) {
     console.error("POST /api/auth/magic-link: rate limit check selhal:", error instanceof Error ? error.message : error);
   }
 
-  if (!limited && isValidEmail(email)) {
-    try {
-      const token = await createMagicLinkToken(email, baseWelcomePrizeG);
-      const safeCallbackUrl = sanitizeCallbackUrl(typeof callbackUrl === "string" ? callbackUrl : null);
-      const loginUrl = `${getSiteUrl()}/api/auth/verify?token=${encodeURIComponent(token)}&callbackUrl=${encodeURIComponent(
-        safeCallbackUrl
-      )}`;
-      await sendMagicLinkEmail({ to: email, loginUrl, welcomePrizeG: baseWelcomePrizeG });
-    } catch (error) {
-      console.error("POST /api/auth/magic-link selhalo:", error instanceof Error ? error.message : error);
-    }
+  // Rate limit / neplatný tvar e-mailu → záměrně stejná generická odpověď
+  // jako při úspěchu (nedá se z ní poznat, že jsme nic neposlali).
+  if (limited || !isValidEmail(email)) {
+    return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
+  }
+
+  try {
+    const token = await createMagicLinkToken(email, baseWelcomePrizeG);
+    const safeCallbackUrl = sanitizeCallbackUrl(typeof callbackUrl === "string" ? callbackUrl : null);
+    const loginUrl = `${getSiteUrl()}/api/auth/verify?token=${encodeURIComponent(token)}&callbackUrl=${encodeURIComponent(
+      safeCallbackUrl
+    )}`;
+    const { id } = await sendMagicLinkEmail({ to: email, loginUrl, welcomePrizeG: baseWelcomePrizeG });
+    // Interní doklad, že provider zprávu přijal (message ID z Resendu) —
+    // bez tohohle logu by nešlo dohledat, že e-mail opravdu odešel.
+    console.log(`POST /api/auth/magic-link: e-mail předán Resendu (id ${id}).`);
+  } catch (error) {
+    console.error("POST /api/auth/magic-link selhalo:", error instanceof Error ? error.message : error);
+    // Technické selhání (DB/Resend) — uživateli se vrací jen obecný kód,
+    // žádný technický detail, ale frontend podle něj pozná, že má nabídnout
+    // "zkuste to znovu" místo falešného "poslali jsme vám odkaz".
+    return NextResponse.json({ ok: false, error: "send_failed" }, { status: 502 });
   }
 
   return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });

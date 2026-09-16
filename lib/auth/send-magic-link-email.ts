@@ -19,14 +19,18 @@ import { MAGIC_LINK_TTL_MINUTES } from "./magic-link.ts";
  * neprozrazuje — viz zadání). Bez `welcomePrizeG` (starý/obecný login,
  * žádná pending výhra) se pošle standardní neutrální text.
  */
-export async function sendMagicLinkEmail(params: { to: string; loginUrl: string; welcomePrizeG?: number }): Promise<void> {
+export async function sendMagicLinkEmail(params: {
+  to: string;
+  loginUrl: string;
+  welcomePrizeG?: number;
+}): Promise<{ id: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY není nastavený.");
 
   const resend = new Resend(apiKey);
   const { subject, text } = buildMagicLinkEmailContent(params);
 
-  const { error } = await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL || "GEMBL.cz <onboarding@resend.dev>",
     to: params.to,
     subject,
@@ -34,6 +38,11 @@ export async function sendMagicLinkEmail(params: { to: string; loginUrl: string;
   });
 
   if (error) throw new Error(`Resend selhal: ${error.message}`);
+
+  // Message ID od Resendu = doklad, že provider zprávu opravdu přijal.
+  // Vrací se volajícímu, který ho zaloguje — jinak by "odesláno" nešlo
+  // zpětně dohledat (přesně to chybělo při diagnostice "e-mail nepřišel").
+  return { id: data?.id ?? "neznámé" };
 }
 
 export function buildMagicLinkEmailContent(params: { loginUrl: string; welcomePrizeG?: number }): { subject: string; text: string } {

@@ -8,10 +8,31 @@ const verifySource = readFileSync(fileURLToPath(new URL("../app/api/auth/verify/
 const spinSource = readFileSync(fileURLToPath(new URL("../app/api/wallet/spin/route.ts", import.meta.url)), "utf8");
 
 describe("POST /api/auth/magic-link", () => {
-  test("odpověď je vždy stejná bez ohledu na to, jestli email existuje/je platný/rate-limitovaný", () => {
+  test("rate limit i neplatný tvar e-mailu vrací stejnou generickou odpověď (nic neprozrazuje o existenci účtu)", () => {
+    // Jediná odbočka je TECHNICKÉ selhání odeslání (502) — ta se týká
+    // providera/DB, ne existence účtu, protože odeslání se zkouší vždy.
+    assert.match(
+      magicLinkSource,
+      /if \(limited \|\| !isValidEmail\(email\)\) \{\s*return NextResponse\.json\(\{ ok: true, message: GENERIC_MESSAGE \}\);\s*\}/
+    );
     const genericReturns = magicLinkSource.match(/return NextResponse\.json\(\{ ok: true, message: GENERIC_MESSAGE \}\);/g) ?? [];
     assert.ok(genericReturns.length >= 1);
-    assert.doesNotMatch(magicLinkSource, /return NextResponse\.json\(\{ ok: true, message: GENERIC_MESSAGE \}\);[\s\S]*return NextResponse\.json\(\{ ok: false/);
+  });
+
+  test("technické selhání odeslání se loguje A vrací 502 (žádný tichý falešný úspěch)", () => {
+    assert.match(
+      magicLinkSource,
+      /console\.error\("POST \/api\/auth\/magic-link selhalo:", error instanceof Error \? error\.message : error\);/
+    );
+    assert.match(magicLinkSource, /return NextResponse\.json\(\{ ok: false, error: "send_failed" \}, \{ status: 502 \}\);/);
+    // Uživateli se nikdy nevrací technický detail ani e-mail/host — jen kód.
+    assert.doesNotMatch(magicLinkSource, /error: error instanceof Error/);
+    assert.doesNotMatch(magicLinkSource, /error\.message \}/);
+  });
+
+  test("úspěšné předání Resendu se loguje včetně message ID (dohledatelné, že e-mail opravdu odešel)", () => {
+    assert.match(magicLinkSource, /const \{ id \} = await sendMagicLinkEmail\(\{ to: email, loginUrl, welcomePrizeG: baseWelcomePrizeG \}\);/);
+    assert.match(magicLinkSource, /console\.log\(`POST \/api\/auth\/magic-link: e-mail předán Resendu \(id \$\{id\}\)\.`\);/);
   });
 
   test("je persistentně (DB, ne in-memory) rate-limitovaný per email (5/15min) i per IP (20/15min)", () => {
@@ -24,7 +45,7 @@ describe("POST /api/auth/magic-link", () => {
   });
 
   test("výpadek DB rate-limiteru selže bezpečně na 'not limited' (fail-open), nerozbije přihlášení", () => {
-    const rateLimitBlock = magicLinkSource.slice(magicLinkSource.indexOf("let limited = false;"), magicLinkSource.indexOf("if (!limited"));
+    const rateLimitBlock = magicLinkSource.slice(magicLinkSource.indexOf("let limited = false;"), magicLinkSource.indexOf("if (limited ||"));
     assert.match(rateLimitBlock, /catch \(error\) \{\s*console\.error\(/);
     assert.doesNotMatch(rateLimitBlock, /throw/);
   });
