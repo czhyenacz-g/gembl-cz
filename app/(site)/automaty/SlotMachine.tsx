@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import CreditGateModal from "../../components/wallet/CreditGateModal";
 import { notifySessionChanged, useSession } from "../../../lib/auth/use-session-client";
 import { useAudio } from "../../../lib/audio/AudioProvider.tsx";
@@ -32,6 +33,12 @@ const FLUSH_EVERY_N_SPINS = 10;
 // Overlay prvky (3 válce, ovládání, statistiky) se pozicují v % vůči tomuto
 // canvasu — drží na obrázku na libovolné šířce bez JS přepočtů. Hodnoty jsou
 // měřené z artworku a dají se tady snadno doladit.
+//
+// MOBIL: v poměru 3:2 je scéna na úzkém displeji tak nízká, že by se do
+// připravených ploch nevešel čitelný (a klikatelný) obsah ovládání/statistik.
+// Proto se od `md` (768 px) výš používá overlay režim výš a POD ním jdou
+// ovládání i statistiky jako běžné panely pod artworkem (viz OVERLAY_POSITION
+// a JSX na konci komponenty). Válce zůstávají v obou režimech na artworku.
 const SCENE_WIDTH = 1536;
 const SCENE_HEIGHT = 1024;
 const BACK_RECT = { left: 20, top: 2.4, width: 7.6, height: 4.4 };
@@ -46,9 +53,28 @@ const REEL_SLOTS: Array<{ left: number; top: number; width: number; height: numb
 const CONTROL_RECT = { left: 25, top: 61, width: 52, height: 12.5 };
 const STATS_RECT = { left: 22.2, top: 79.4, width: 55.6, height: 15.7 };
 
-function pct(rect: { left: number; top: number; width: number; height: number }) {
+type SceneRect = { left: number; top: number; width: number; height: number };
+
+function pct(rect: SceneRect) {
   return { left: `${rect.left}%`, top: `${rect.top}%`, width: `${rect.width}%`, height: `${rect.height}%` };
 }
+
+/** Pozice panelu v % scény předaná jako CSS proměnné — inline `width`/`height`
+ * v % by na mobilu (kde panel teče pod artworkem) rozbily šířku, takže se
+ * aplikují až od `md` přes OVERLAY_POSITION. */
+function overlayStyle(rect: SceneRect): CSSProperties {
+  return {
+    "--ov-left": `${rect.left}%`,
+    "--ov-top": `${rect.top}%`,
+    "--ov-width": `${rect.width}%`,
+    "--ov-height": `${rect.height}%`,
+  } as CSSProperties;
+}
+
+/** `md:` pozicování panelů, které jsou na mobilu v normálním toku pod scénou
+ * (ovládání, statistiky) a od `md` výš sedí přesně v připravené ploše artworku. */
+const OVERLAY_POSITION =
+  "md:absolute md:z-10 md:left-[var(--ov-left)] md:top-[var(--ov-top)] md:h-[var(--ov-height)] md:w-[var(--ov-width)]";
 
 type ToastItem = { key: number; title: string };
 
@@ -420,18 +446,41 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
           text z obrázku") — h1 zůstává jen pro SEO/accessibility. */}
       <h1 className="sr-only">Automaty</h1>
 
-      <div
-        className="relative mx-auto w-full max-w-[1600px] select-none"
-        style={{ aspectRatio: `${SCENE_WIDTH} / ${SCENE_HEIGHT}` }}
-      >
-        <Image
-          src="/skins/automaty/automaty.webp"
-          alt="Automaty — hrací automat se třemi válci"
-          width={SCENE_WIDTH}
-          height={SCENE_HEIGHT}
-          priority
-          className="absolute inset-0 h-full w-full object-contain"
-        />
+      {/* Souřadnicový prostor scény. Na mobilu se artwork a panely (ovládání,
+          statistiky) skládají pod sebe; od `md` výš je to jen absolutní
+          prostor, jehož výška = artwork (panely v něm sedí jako overlaye). */}
+      <div className="relative mx-auto flex w-full max-w-[1600px] flex-col gap-3 select-none md:block md:gap-0">
+        <div className="relative w-full" style={{ aspectRatio: `${SCENE_WIDTH} / ${SCENE_HEIGHT}` }}>
+          <Image
+            src="/skins/automaty/automaty.webp"
+            alt="Automaty — hrací automat se třemi válci"
+            width={SCENE_WIDTH}
+            height={SCENE_HEIGHT}
+            priority
+            className="absolute inset-0 h-full w-full object-contain"
+          />
+
+          {/* Zpět a logo GEMBL.CZ — klikací overlaye nad vytištěnými. */}
+          <Link
+            href="/casino"
+            aria-label="Zpět do kasina"
+            className="absolute z-10 rounded-[var(--gembl-radius)] transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
+            style={pct(BACK_RECT)}
+          />
+          <Link
+            href="/casino"
+            aria-label="GEMBL.cz — kasino"
+            className="absolute z-10 rounded-[var(--gembl-radius)] transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
+            style={pct(LOGO_RECT)}
+          />
+
+          {/* Tři válce do připravených světlých panelů (žádné další HTML boxy) */}
+          {REEL_SLOTS.map((slot, index) => (
+            <div key={index} className="absolute z-10 flex items-center justify-center" style={pct(slot)}>
+              <Reel symbol={reels ? reels[index] : null} spinning={spinning} />
+            </div>
+          ))}
+        </div>
 
         <div className="fixed right-4 top-20 z-50 flex flex-col gap-2 sm:top-24">
           {toasts.map((t) => (
@@ -439,51 +488,32 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
           ))}
         </div>
 
-        {/* Zpět a logo GEMBL.CZ — klikací overlaye nad vytištěnými. */}
-        <Link
-          href="/casino"
-          aria-label="Zpět do kasina"
-          className="absolute z-10 rounded-[var(--gembl-radius)] transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
-          style={pct(BACK_RECT)}
-        />
-        <Link
-          href="/casino"
-          aria-label="GEMBL.cz — kasino"
-          className="absolute z-10 rounded-[var(--gembl-radius)] transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper"
-          style={pct(LOGO_RECT)}
-        />
-
-        {/* Tři válce do připravených světlých panelů (žádné další HTML boxy) */}
-        {REEL_SLOTS.map((slot, index) => (
-          <div key={index} className="absolute z-10 flex items-center justify-center" style={pct(slot)}>
-            <Reel symbol={reels ? reels[index] : null} spinning={spinning} />
-          </div>
-        ))}
-
-        {/* Ovládání sázky + spin do připravené plochy pod válci */}
+        {/* Ovládání sázky + spin. Na mobilu vlastní panel pod artworkem
+            (obsah se vejde celý a čitelně), od `md` overlay do připravené
+            plochy pod válci. */}
         <div
-          className="absolute z-10 flex flex-col items-center justify-center gap-[clamp(2px,0.6vw,6px)] px-[2%] text-center"
-          style={pct(CONTROL_RECT)}
+          className={`${OVERLAY_POSITION} flex flex-col items-center justify-center gap-2 border-2 border-gembl-ink bg-gembl-paper-dark px-3 py-3 text-center md:gap-[clamp(2px,0.6vw,6px)] md:border-0 md:bg-transparent md:px-[2%] md:py-0`}
+          style={overlayStyle(CONTROL_RECT)}
         >
-          <div className="flex flex-wrap items-center justify-center gap-x-[clamp(3px,1vw,14px)] gap-y-[clamp(2px,0.6vw,8px)]">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 md:gap-x-[clamp(3px,1vw,14px)] md:gap-y-[clamp(2px,0.6vw,8px)]">
             <div className="flex items-center gap-[0.4em]">
-              <span className="text-[clamp(0.5rem,1vw,0.75rem)] font-semibold uppercase tracking-wide text-gembl-muted">Sázka</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-gembl-muted md:text-[clamp(0.5rem,1vw,0.75rem)]">Sázka</span>
               <button
                 type="button"
                 onClick={() => adjustBet(-BET_STEP)}
                 disabled={spinning || bet <= MIN_BET}
                 aria-label="Snížit sázku"
-                className="flex h-[clamp(1.5rem,2.6vw,2.5rem)] w-[clamp(1.5rem,2.6vw,2.5rem)] items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-[clamp(0.8rem,1.6vw,1.2rem)] font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
+                className="flex h-9 w-9 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-lg font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red md:h-[clamp(1.5rem,2.6vw,2.5rem)] md:w-[clamp(1.5rem,2.6vw,2.5rem)] md:text-[clamp(0.8rem,1.6vw,1.2rem)]"
               >
                 −
               </button>
-              <span className="min-w-[3.5em] text-center font-mono text-[clamp(0.75rem,1.5vw,1.15rem)] font-bold text-gembl-ink">{bet} G</span>
+              <span className="min-w-[3.5em] text-center font-mono text-base font-bold text-gembl-ink md:text-[clamp(0.75rem,1.5vw,1.15rem)]">{bet} G</span>
               <button
                 type="button"
                 onClick={() => adjustBet(BET_STEP)}
                 disabled={spinning || bet >= maxAllowedBet}
                 aria-label="Zvýšit sázku"
-                className="flex h-[clamp(1.5rem,2.6vw,2.5rem)] w-[clamp(1.5rem,2.6vw,2.5rem)] items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-[clamp(0.8rem,1.6vw,1.2rem)] font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
+                className="flex h-9 w-9 items-center justify-center border-2 border-gembl-ink bg-gembl-paper text-lg font-bold text-gembl-ink transition hover:bg-gembl-paper-dark disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red md:h-[clamp(1.5rem,2.6vw,2.5rem)] md:w-[clamp(1.5rem,2.6vw,2.5rem)] md:text-[clamp(0.8rem,1.6vw,1.2rem)]"
               >
                 +
               </button>
@@ -493,27 +523,27 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
               type="button"
               onClick={handleSpin}
               disabled={!canSpin}
-              className="min-h-[clamp(1.9rem,3.6vw,3.25rem)] border-2 border-gembl-ink bg-gembl-red px-[clamp(0.7rem,1.8vw,1.5rem)] py-1 font-serif text-[clamp(0.7rem,1.4vw,1.05rem)] font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
+              className="min-h-[44px] border-2 border-gembl-ink bg-gembl-red px-5 py-2 font-serif text-sm font-bold uppercase tracking-wide text-gembl-paper shadow-hard transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink md:min-h-[clamp(1.9rem,3.6vw,3.25rem)] md:px-[clamp(0.7rem,1.8vw,1.5rem)] md:py-1 md:text-[clamp(0.7rem,1.4vw,1.05rem)]"
             >
               {spinning ? "TOČÍ SE…" : `VSADIT ${bet} G`}
             </button>
 
-            <span className="gembl-tag text-[clamp(0.5rem,1vw,0.75rem)]">
+            <span className="gembl-tag text-sm md:text-[clamp(0.5rem,1vw,0.75rem)]">
               Zůstatek:{" "}
               <strong className="font-mono font-semibold text-gembl-ink">{displayCredits.toLocaleString("cs-CZ")} G</strong>
             </span>
           </div>
 
           <div className="min-h-[1em]">
-            {jackpotFlash && <span className="animate-pulse font-serif text-[clamp(0.8rem,1.7vw,1.3rem)] font-black uppercase text-gembl-red">JACKPOT!</span>}
+            {jackpotFlash && <span className="animate-pulse font-serif text-2xl font-black uppercase text-gembl-red md:text-[clamp(0.8rem,1.7vw,1.3rem)]">JACKPOT!</span>}
             {!jackpotFlash && resultMessage && (
-              <span className="font-serif text-[clamp(0.65rem,1.3vw,0.95rem)] font-bold text-gembl-ink">
+              <span className="font-serif text-base font-bold text-gembl-ink md:text-[clamp(0.65rem,1.3vw,0.95rem)]">
                 Výhra: 0 G · <span className="text-gembl-muted">{resultMessage}</span>
               </span>
             )}
           </div>
 
-          <p className="text-[clamp(0.45rem,0.9vw,0.7rem)] leading-tight text-gembl-muted">
+          <p className="text-xs leading-tight text-gembl-muted md:text-[clamp(0.45rem,0.9vw,0.7rem)]">
             Upozornění: V této hře není možné vyhrát. Sázka je {MIN_BET}–{MAX_BET} G (po {BET_STEP}), výhra je vždy 0 G.
           </p>
 
@@ -521,16 +551,20 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
             <button
               type="button"
               onClick={() => setShowCreditGate(true)}
-              className="text-[clamp(0.5rem,1vw,0.75rem)] font-semibold text-gembl-red underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red"
+              className="text-sm font-semibold text-gembl-red underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red md:text-[clamp(0.5rem,1vw,0.75rem)]"
             >
               {loggedIn ? "Nemáš dost kreditů. Dobij G a hraj dál." : "Nemáš dost kreditů. Přihlas se a dobij G."}
             </button>
           )}
         </div>
 
-        {/* Statistiky + reset do připravené spodní plochy */}
-        <div className="absolute z-10 flex flex-col items-center justify-center gap-[clamp(2px,0.8vw,8px)] px-[2%]" style={pct(STATS_RECT)}>
-          <dl className="grid w-full grid-cols-3 gap-x-[clamp(3px,1vw,14px)] gap-y-[clamp(1px,0.4vw,4px)] text-center sm:grid-cols-5">
+        {/* Statistiky + reset — na mobilu panel pod ovládáním, od `md` overlay
+            do připravené spodní plochy artworku. */}
+        <div
+          className={`${OVERLAY_POSITION} flex flex-col items-center justify-center gap-2 border-2 border-gembl-ink bg-gembl-paper-dark px-3 py-3 md:gap-[clamp(2px,0.8vw,8px)] md:border-0 md:bg-transparent md:px-[2%] md:py-0`}
+          style={overlayStyle(STATS_RECT)}
+        >
+          <dl className="grid w-full grid-cols-3 gap-x-2 gap-y-1 text-center md:grid-cols-5 md:gap-x-[clamp(3px,1vw,14px)] md:gap-y-[clamp(1px,0.4vw,4px)]">
             <StatItem label="Zůstatek" value={`${displayCredits.toLocaleString("cs-CZ")} G`} />
             <StatItem label="Spinů" value={player.totalSpins.toLocaleString("cs-CZ")} />
             <StatItem label="Protočeno" value={`${player.totalWagered.toLocaleString("cs-CZ")} G`} />
@@ -542,27 +576,27 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
             <button
               type="button"
               onClick={() => setShowResetConfirm(true)}
-              className="min-h-[clamp(1.4rem,2.6vw,2.25rem)] border border-gembl-ink px-[clamp(0.5rem,1.2vw,1rem)] py-0.5 text-[clamp(0.5rem,1vw,0.75rem)] uppercase tracking-wide text-gembl-muted transition hover:border-gembl-red hover:text-gembl-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink"
+              className="min-h-[40px] border border-gembl-ink px-4 py-1 text-sm uppercase tracking-wide text-gembl-muted transition hover:border-gembl-red hover:text-gembl-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink md:min-h-[clamp(1.4rem,2.6vw,2.25rem)] md:px-[clamp(0.5rem,1.2vw,1rem)] md:py-0.5 md:text-[clamp(0.5rem,1vw,0.75rem)]"
             >
               RESETOVAT KARIÉRU
             </button>
           ) : (
-            <div className="absolute left-1/2 top-1/2 z-20 w-[min(92%,22rem)] -translate-x-1/2 -translate-y-1/2 border-2 border-gembl-red bg-gembl-paper p-3">
-              <p className="text-center text-[clamp(0.6rem,1.2vw,0.85rem)] text-gembl-ink">
+            <div className="mt-1 w-full border-2 border-gembl-red bg-gembl-paper p-3 md:absolute md:left-1/2 md:top-1/2 md:z-20 md:mt-0 md:w-[min(92%,22rem)] md:-translate-x-1/2 md:-translate-y-1/2">
+              <p className="text-center text-sm text-gembl-ink md:text-[clamp(0.6rem,1.2vw,0.85rem)]">
                 Opravdu chceš resetovat kariéru? Tohle nevratně smaže tvůj postup.
               </p>
               <div className="mt-2 flex justify-center gap-2">
                 <button
                   type="button"
                   onClick={handleResetConfirm}
-                  className="min-h-[clamp(1.6rem,3vw,2.25rem)] border-2 border-gembl-ink bg-gembl-red px-[clamp(0.5rem,1.2vw,1rem)] py-1 text-[clamp(0.55rem,1.1vw,0.8rem)] font-semibold uppercase tracking-wide text-gembl-paper shadow-hard-sm transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
+                  className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gembl-paper shadow-hard-sm transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none md:min-h-[clamp(1.6rem,3vw,2.25rem)] md:px-[clamp(0.5rem,1.2vw,1rem)] md:py-1 md:text-[clamp(0.55rem,1.1vw,0.8rem)]"
                 >
                   Ano, resetovat
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowResetConfirm(false)}
-                  className="min-h-[clamp(1.6rem,3vw,2.25rem)] border border-gembl-ink px-[clamp(0.5rem,1.2vw,1rem)] py-1 text-[clamp(0.55rem,1.1vw,0.8rem)] text-gembl-ink transition hover:bg-gembl-paper-dark"
+                  className="min-h-[40px] border border-gembl-ink px-4 py-2 text-xs text-gembl-ink transition hover:bg-gembl-paper-dark md:min-h-[clamp(1.6rem,3vw,2.25rem)] md:px-[clamp(0.5rem,1.2vw,1rem)] md:py-1 md:text-[clamp(0.55rem,1.1vw,0.8rem)]"
                 >
                   Zrušit
                 </button>
@@ -580,8 +614,8 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[clamp(0.45rem,0.9vw,0.72rem)] uppercase tracking-wide text-gembl-muted">{label}</dt>
-      <dd className="font-mono text-[clamp(0.6rem,1.2vw,0.95rem)] font-semibold text-gembl-ink">{value}</dd>
+      <dt className="text-[0.65rem] uppercase tracking-wide text-gembl-muted md:text-[clamp(0.45rem,0.9vw,0.72rem)]">{label}</dt>
+      <dd className="font-mono text-sm font-semibold text-gembl-ink md:text-[clamp(0.6rem,1.2vw,0.95rem)]">{value}</dd>
     </div>
   );
 }
