@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import PromotionSlot from "../../components/promotions/PromotionSlot";
 import { SITE_DESCRIPTION, SITE_TITLE } from "../../config/site";
 import { getActiveSkin } from "../../../lib/casino-skins/index.ts";
-import CasinoViewSwitch from "./CasinoViewSwitch.tsx";
+import StageViewSwitch from "../../components/stage/StageViewSwitch.tsx";
 import CreditGateOnArrival from "./CreditGateOnArrival";
 import LegacyCasinoLayout from "./LegacyCasinoLayout.tsx";
 import PaymentStatusBanner from "./PaymentStatusBanner";
@@ -29,16 +29,16 @@ export default function Home() {
 
       {/* Artwork stage (>= skin.minStageWidth, dnes 1100px) vs. současný
           poster-grid layout — přepíná se JS podle šířky viewportu
-          (CasinoViewSwitch), NE čistým CSS `hidden`, protože obě větve
+          (StageViewSwitch), NE čistým CSS `hidden`, protože obě větve
           obsahují komponenty s vedlejšími efekty při mountu (impression
           tracking v PromotionSlot, useSession() fetch) a smí být mountnutá
-          vždy jen jedna z nich zároveň — viz komentář v CasinoViewSwitch.tsx.
+          vždy jen jedna z nich zároveň — viz komentář ve StageViewSwitch.tsx.
           `CreditGateOnArrival`/`WelcomePrizeOnArrival` patří JEN do legacy
           větve — stage má rovnocenné funkce uvnitř svého centrálního
           modal stavu (viz creditGate prop a useWelcomePrizePopup v
           ClassicCasinoStage.tsx); kdyby běžely i pro stage, otevřely by se
           dva modaly zároveň (viz zadání "dvojí dialog"). */}
-      <CasinoViewSwitch
+      <StageViewSwitch
         stage={
           <ClassicCasinoStage
             skin={skin}

@@ -4,7 +4,7 @@ import type { CasinoSkin } from "./types.ts";
 // 1448×1086 px) — pixel-scan přes ploché barevné/ohraničené zóny (menu
 // řádky, account box, stat řádky) + vizuální odhad u ozdobnějších částí
 // (reel okno, blank panely pod automatem). Malá nepřesnost (pár px) je
-// v pořádku, protože celý stage škáluje proporcionálně (viz CasinoStage).
+// v pořádku, protože celý stage škáluje proporcionálně (viz ArtworkStage).
 export const classicSkin: CasinoSkin = {
   id: "classic",
   name: "Classic",
@@ -106,6 +106,33 @@ export const classicSkin: CasinoSkin = {
       // 180 px široký (x:1090-1270), ne 300 — dřív přesahoval mimo panel
       // do dekorativního pozadí vpravo.
       achievementsCta: { x: 1090, y: 957, width: 180, height: 48 },
+    },
+  },
+
+  // Společný "univerzální" obsahový stage pro /profil, /zebricky a
+  // /jak-to-funguje (viz app/components/stage/). Jeden artwork bez
+  // route-specific textu + dvě zóny: vytištěný box "← ZPĚT" a velký světlý
+  // centrální panel, do kterého se overlayuje živé HTML (title + content).
+  // Souřadnice změřené pixel-scanem artworku (1536×1024), stejný princip
+  // jako `layout` výš — malá nepřesnost je v pořádku, stage škáluje
+  // proporcionálně.
+  universal: {
+    designWidth: 1536,
+    designHeight: 1024,
+    background: {
+      // Statický artwork (žádný slideshow) — jedna URL, `frames` se
+      // nepoužívá, takže StageBackground vykreslí jen první snímek.
+      src: "/skins/classic/universal-background.webp",
+      alt: "",
+    },
+    layout: {
+      // Vytištěný rámeček "← ZPĚT" vlevo nahoře (text/šipka jsou součástí
+      // artworku, overlay je jen klikací plocha + focus ring).
+      back: { x: 21, y: 10, width: 169, height: 76 },
+      // Vnitřní plocha světlého papírového panelu (bez zlatého rámu) —
+      // obsah si uvnitř řeší vlastní padding, takže zóna sedí kousek
+      // uvnitř vytištěného rámečku.
+      panel: { x: 355, y: 362, width: 825, height: 378 },
     },
   },
 };

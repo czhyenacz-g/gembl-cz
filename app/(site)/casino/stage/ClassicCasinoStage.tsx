@@ -10,7 +10,7 @@ import type { CasinoSkin } from "../../../../lib/casino-skins/index.ts";
 import { rectStyle } from "../../../../lib/casino-skins/rect-style.ts";
 import { useWelcomePrizePopup } from "../../../../lib/onboarding/use-welcome-prize-popup.ts";
 import AccountOverlay from "./AccountOverlay.tsx";
-import CasinoStage from "./CasinoStage.tsx";
+import ArtworkStage from "../../../components/stage/ArtworkStage.tsx";
 import MenuOverlay from "./MenuOverlay.tsx";
 import SlotTeaser from "./SlotTeaser.tsx";
 import StatsOverlay from "./StatsOverlay.tsx";
@@ -26,12 +26,12 @@ import StatsOverlay from "./StatsOverlay.tsx";
 // jen v SlotMachine.tsx na /automaty.
 type StageModal = { kind: "none" } | { kind: "login" } | { kind: "topup" } | { kind: "welcome"; amountG: number };
 
-// Skládá celý "classic" skin dohromady: background canvas (CasinoStage) +
+// Skládá celý "classic" skin dohromady: background canvas (ArtworkStage) +
 // živé HTML overlaye napozicované podle skin.layout. Žádná herní/wallet/
 // auth LOGIKA tady není (spin/wallet API zůstává v SlotMachine.tsx, login/
 // topup v existujících modal komponentách) — jen kompozice + sdílený
 // modal stav. "use client" kvůli useState/useSession zde přímo (dřív to
-// řešil jen kvůli CasinoStage) — `promotionSlot` jako server komponenta
+// řešil jen kvůli ArtworkStage) — `promotionSlot` jako server komponenta
 // v props funguje stejně jako dřív.
 export default function ClassicCasinoStage({
   skin,
@@ -67,7 +67,7 @@ export default function ClassicCasinoStage({
           artwork ("AUTOMATY" / "Těsně vedle."), ať se titulek nezdvojuje. */}
       <h1 className="sr-only">Automaty — Těsně vedle.</h1>
 
-      <CasinoStage skin={skin}>
+      <ArtworkStage canvas={skin}>
         <Link
           href="/"
           style={rectStyle(skin.layout.logoHome)}
@@ -83,7 +83,7 @@ export default function ClassicCasinoStage({
         />
         <StatsOverlay layout={skin.layout.stats} />
         <SlotTeaser layout={skin.layout.slot} />
-      </CasinoStage>
+      </ArtworkStage>
 
       {promotionSlot && <div className="mt-8">{promotionSlot}</div>}
 

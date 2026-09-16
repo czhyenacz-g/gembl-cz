@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import ContentPage from "../../components/stage/ContentPage";
+import ProfilPanel, { ProfilActions } from "./ProfilPanel";
 
 const TITLE = "Profil";
-const DESCRIPTION = "Tvůj profil na GEMBL.cz — zatím v přípravě.";
+const DESCRIPTION = "Tvůj profil na GEMBL.cz — zůstatek, statistiky a postup v jednom přehledu.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -10,17 +12,18 @@ export const metadata: Metadata = {
   openGraph: { images: [{ url: `/api/og?title=${encodeURIComponent(TITLE)}`, width: 1200, height: 630 }] },
 };
 
-// Placeholder stránka — route musí existovat, aby menu položka mohla být
-// aktivní a klikací hned (viz zadání "menu položka má být aktivní a
-// klikací, i když route zatím jen placeholder"). Reálný profil (historie
-// transakcí, achievementy na jednom místě apod.) přijde později.
+// /profil jede na společném obsahovém stage (viz app/components/stage/) —
+// na desktopu artwork + živý panel, pod breakpointem běžná stránka. Data
+// jsou jen ta, která projekt reálně má (session + lokální postup hráče),
+// žádný nový backend.
 export default function ProfilPage() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-16 text-center text-gembl-ink">
-      <h1 className="gembl-masthead inline-block text-3xl font-black sm:text-4xl">Profil</h1>
-      <p className="mt-4 text-lg text-gembl-muted">
-        Přehled tvého účtu, zůstatku a historie tu bude brzy. Zůstatek zatím najdeš v horním panelu.
-      </p>
-    </div>
+    <ContentPage
+      title="Profil"
+      subtitle="Zůstatek, statistiky a postup v jednom přehledu."
+      actions={<ProfilActions />}
+    >
+      <ProfilPanel />
+    </ContentPage>
   );
 }

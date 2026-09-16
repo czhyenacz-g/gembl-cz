@@ -3,7 +3,7 @@
 import { useLayoutEffect, useState } from "react";
 
 // Sdílený "je viewport aspoň X px široký" hook — používá ho jak přepínání
-// /casino stage/legacy layoutu (CasinoViewSwitch), tak skrývání globální
+// /casino stage/legacy layoutu (StageViewSwitch), tak skrývání globální
 // navigace/patičky na desktop stage (SiteChrome), ať obě místa čtou
 // STEJNOU logiku, ne dvě nezávislé kopie matchMedia kódu. Server vždy
 // vrátí `false` (deterministický první render, žádný hydration mismatch),

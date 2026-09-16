@@ -96,24 +96,30 @@ describe("přesun resetu pryč z /automaty a zrušené stránky", () => {
     assert.match(nextConfigSource, /source: "\/hry", destination: "\/casino", permanent: true/);
   });
 
-  test("obsah /o-projektu je připojený jako sekce na /jak-to-funguje (včetně disclaimeru)", () => {
+  test("obsah /o-projektu (satira + disclaimer) zůstal na /jak-to-funguje i po přesunu do stage shellu", () => {
     const jakSource = readFileSync(
       fileURLToPath(new URL("../app/(site)/jak-to-funguje/page.tsx", import.meta.url)),
       "utf8"
     );
-    assert.match(jakSource, /Co je GEMBL\.cz/);
+    assert.match(jakSource, /Proč to existuje/);
     assert.match(jakSource, /Důležité upozornění/);
     assert.match(jakSource, /\{DISCLAIMER\}/);
   });
 
-  test("/jak-to-funguje jede bez menu/patičky (STANDALONE_ROUTES) a má vlastní šipku zpět", () => {
+  test("/jak-to-funguje jede bez menu/patičky (STANDALONE_ROUTES) a jeho mobile fallback má šipku zpět", () => {
     const chromeSource = readFileSync(fileURLToPath(new URL("../app/components/SiteChrome.tsx", import.meta.url)), "utf8");
     assert.match(chromeSource, /\/jak-to-funguje"\]\);/);
     const jakSource = readFileSync(
       fileURLToPath(new URL("../app/(site)/jak-to-funguje/page.tsx", import.meta.url)),
       "utf8"
     );
-    assert.match(jakSource, /← ZPĚT/);
-    assert.match(jakSource, /aria-label="Zpět do kasina"/);
+    assert.match(jakSource, /legacyBack/);
+    // Vlastní šipka zpět žije ve sdíleném shellu (ContentPage), ne v page.tsx.
+    const contentPageSource = readFileSync(
+      fileURLToPath(new URL("../app/components/stage/ContentPage.tsx", import.meta.url)),
+      "utf8"
+    );
+    assert.match(contentPageSource, /← ZPĚT/);
+    assert.match(contentPageSource, /aria-label="Zpět do kasina"/);
   });
 });

@@ -1,7 +1,7 @@
 import { classicSkin } from "./classic.ts";
 import type { CasinoSkin } from "./types.ts";
 
-export type { CasinoSkin, SkinRect, ClassicMenuItem } from "./types.ts";
+export type { CasinoSkin, ClassicMenuItem, SkinRect, StageCanvas, UniversalStage } from "./types.ts";
 
 // Registry pro budoucí skiny (vegas/win95/christmas, viz zadání "skin-ready
 // architektura") — zatím jediný klíč. Žádný switcher UI, jen tenhle objekt,

@@ -6,8 +6,8 @@ import { classicSkin } from "../lib/casino-skins/classic.ts";
 
 // "use client" + timery/DOM — zdrojová kontrola, stejný vzor jako
 // test/losy-wiring.test.ts (žádný DOM test harness v tomhle starteru).
-const bgSource = readFileSync(fileURLToPath(new URL("../app/(site)/casino/stage/StageBackground.tsx", import.meta.url)), "utf8");
-const stageSource = readFileSync(fileURLToPath(new URL("../app/(site)/casino/stage/CasinoStage.tsx", import.meta.url)), "utf8");
+const bgSource = readFileSync(fileURLToPath(new URL("../app/components/stage/StageBackground.tsx", import.meta.url)), "utf8");
+const stageSource = readFileSync(fileURLToPath(new URL("../app/components/stage/ArtworkStage.tsx", import.meta.url)), "utf8");
 
 describe("classicSkin.background — animované pozadí stage", () => {
   test("má 4 snímky a první je shodný se `src` (žádné bliknutí při hydrataci)", () => {
@@ -48,10 +48,10 @@ describe("StageBackground.tsx — crossfade slideshow", () => {
   });
 });
 
-describe("CasinoStage.tsx — napojení slideshow na stage", () => {
+describe("ArtworkStage.tsx — napojení slideshow na stage", () => {
   test("používá StageBackground místo jednoho statického <Image> v scale větvi", () => {
     assert.match(stageSource, /import StageBackground from "\.\/StageBackground\.tsx";/);
-    assert.match(stageSource, /<StageBackground[\s\S]*?frames=\{skin\.background\.frames \?\? \[skin\.background\.src\]\}/);
+    assert.match(stageSource, /<StageBackground[\s\S]*?frames=\{canvas\.background\.frames \?\? \[canvas\.background\.src\]\}/);
   });
 
   test("SSR/first-paint fallback používá stejnou URL jako první frame (unoptimized)", () => {

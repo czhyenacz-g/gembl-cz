@@ -23,7 +23,7 @@ const HOW_IT_WORKS = [
 ] as const;
 
 // Současný poster-grid layout beze změny — fallback pro šířky pod
-// skin.minStageWidth (viz CasinoViewSwitch) i pro no-JS. Obsah 1:1
+// skin.minStageWidth (viz StageViewSwitch) i pro no-JS. Obsah 1:1
 // přesunutý z původního app/(site)/casino/page.tsx.
 export default function LegacyCasinoLayout({ pathname }: { pathname: string }) {
   return (

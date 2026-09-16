@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import type { CasinoSkin } from "../../../../lib/casino-skins/index.ts";
+import type { StageCanvas } from "../../../lib/casino-skins/index.ts";
 import StageBackground from "./StageBackground.tsx";
 
-// Referenční canvas = skutečné rozměry background obrázku (skin.designWidth/
+// Referenční canvas = skutečné rozměry background obrázku (canvas.designWidth/
 // designHeight). Jediný scaling mechanismus v celé stage vrstvě: změř
 // dostupnou šířku wrapperu, dopočítej `scale`, aplikuj `transform: scale()`
 // s `transform-origin: top left` na box s přesně designovými rozměry —
@@ -22,7 +22,11 @@ import StageBackground from "./StageBackground.tsx";
 // `useLayoutEffect` (ne `useEffect`) měření provede ještě před prvním
 // vykreslením prohlížečem, takže na klientské navigaci (Link) k probliknutí
 // prakticky nedochází.
-export default function CasinoStage({ skin, children }: { skin: CasinoSkin; children: ReactNode }) {
+//
+// Komponenta je záměrně obecná (`StageCanvas`): používá ji herní stage na
+// /casino (classicSkin) i společný obsahový stage informačních stránek
+// (classicSkin.universal) — viz app/components/stage/UniversalContentStage.tsx.
+export default function ArtworkStage({ canvas, children }: { canvas: StageCanvas; children: ReactNode }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
 
@@ -31,7 +35,7 @@ export default function CasinoStage({ skin, children }: { skin: CasinoSkin; chil
     if (!el) return;
 
     function measure(width: number) {
-      if (width > 0) setScale(width / skin.designWidth);
+      if (width > 0) setScale(width / canvas.designWidth);
     }
 
     measure(el.getBoundingClientRect().width);
@@ -43,7 +47,7 @@ export default function CasinoStage({ skin, children }: { skin: CasinoSkin; chil
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [skin.designWidth]);
+  }, [canvas.designWidth]);
 
   return (
     <div ref={wrapperRef} className="relative mx-auto w-full" style={{ maxWidth: 1800 }}>
@@ -52,30 +56,30 @@ export default function CasinoStage({ skin, children }: { skin: CasinoSkin; chil
         // záměrně stejná URL jako první frame slideshow (`unoptimized`), ať
         // při hydrataci neproblikne prázdné pozadí (viz StageBackground.tsx).
         <Image
-          src={skin.background.src}
-          alt={skin.background.alt}
-          width={skin.designWidth}
-          height={skin.designHeight}
+          src={canvas.background.src}
+          alt={canvas.background.alt}
+          width={canvas.designWidth}
+          height={canvas.designHeight}
           priority
           unoptimized
           className="block h-auto w-full select-none"
         />
       ) : (
-        <div className="relative overflow-hidden" style={{ height: skin.designHeight * scale }}>
+        <div className="relative overflow-hidden" style={{ height: canvas.designHeight * scale }}>
           <div
             className="relative"
             style={{
-              width: skin.designWidth,
-              height: skin.designHeight,
+              width: canvas.designWidth,
+              height: canvas.designHeight,
               transform: `scale(${scale})`,
               transformOrigin: "top left",
             }}
           >
             <StageBackground
-              alt={skin.background.alt}
-              frames={skin.background.frames ?? [skin.background.src]}
-              width={skin.designWidth}
-              height={skin.designHeight}
+              alt={canvas.background.alt}
+              frames={canvas.background.frames ?? [canvas.background.src]}
+              width={canvas.designWidth}
+              height={canvas.designHeight}
             />
             {children}
           </div>

@@ -373,6 +373,32 @@
   pointer-events: none;
 }
 
+/* Nenápadný "retro" scrollbar pro centrální panel univerzálního stage
+ * (/profil, /zebricky, /jak-to-funguje) — obsah se scrolluje jen uvnitř
+ * papírového panelu, takže pruh nesmí působit jako moderní UI prvek:
+ * tenký, v barvách papíru, ostré rohy, žádný glow. */
+.gembl-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gembl-muted) transparent;
+}
+
+.gembl-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.gembl-scroll::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.gembl-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--gembl-line);
+  border-radius: 0;
+}
+
+.gembl-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--gembl-red);
+}
+
 /* Hrací stůl/deska pod herními prvky — světlejší plocha s vnitřním
  * "dvojitým" rámečkem (inset stín), ať tři pozice kelímků působí ukotveně
  * na stole, ne jako volně plovoucí. */
