@@ -51,7 +51,9 @@ export default function LeftSidebar() {
         <p className="gembl-panel-title text-center">Vítej v kasinu, kde vždycky prohraješ.</p>
         <div className="gembl-panel-body">
           <ArtworkPlaceholder label="Ilustrace maskota" aspectRatio="3 / 4" />
-          <Link href="/o-projektu" className="gembl-cta gembl-cta--secondary mt-4 w-full">
+          {/* /o-projektu se sloučil do /jak-to-funguje (viz zadání) — odkaz
+              zůstává, jen míří na sloučenou stránku. */}
+          <Link href="/jak-to-funguje" className="gembl-cta gembl-cta--secondary mt-4 w-full">
             Více info
           </Link>
         </div>

@@ -29,7 +29,11 @@ import Header from "./Header";
 // /casino stage, která se zapíná jen nad skin.minStageWidth (pod ní jede
 // LegacyCasinoLayout s headerem/footerem). Scéna si vlastní layout i
 // `min-h-screen` řeší sama (viz app/(site)/skorapky/ShellGame.tsx).
-const STANDALONE_GAME_ROUTES = new Set<string>(["/skorapky", "/losy", "/automaty"]);
+// /jak-to-funguje se sem přidal taky (viz zadání "aby tam nebylo to menu,
+// footer, ale byla tam ta šipka zpět") — je to obsahová stránka, ale jede
+// ve stejném "samostatném" režimu jako hry a vlastní šipku zpět si kreslí
+// sama (viz app/(site)/jak-to-funguje/page.tsx).
+const STANDALONE_ROUTES = new Set<string>(["/skorapky", "/losy", "/automaty", "/jak-to-funguje"]);
 
 export default function SiteChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -37,8 +41,8 @@ export default function SiteChrome({ children }: { children: ReactNode }) {
   // route podmínkou až v samostatném řádku, ne přes `&&` short-circuit.
   const isWideEnough = useMinWidth(getActiveSkin().minStageWidth);
   const isDesktopStage = pathname === "/casino" && isWideEnough;
-  const isStandaloneGame = STANDALONE_GAME_ROUTES.has(pathname);
-  const hideChrome = isDesktopStage || isStandaloneGame;
+  const isStandalone = STANDALONE_ROUTES.has(pathname);
+  const hideChrome = isDesktopStage || isStandalone;
 
   return (
     <div className={hideChrome ? undefined : "flex min-h-screen flex-col"}>

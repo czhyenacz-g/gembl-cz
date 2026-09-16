@@ -13,16 +13,17 @@ export const SUBTAGLINE = "Výhra není možná. Ano, vážně.";
 // Žádný gambling v pravém slova smyslu — výhra zůstává navždy nemožná
 // (RTP 0 %, payout vždy 0, viz lib/casino/slot-engine.ts), i když si G
 // teď lze dokoupit za reálné peníze (viz lib/wallet/). Tenhle disclaimer
-// se zobrazuje na /o-projektu a v patičce, ať je hned jasné, že jde o
-// satiru/hru, ne o skutečné hazardní hraní, a že G nemají peněžní hodnotu.
+// se zobrazuje na /jak-to-funguje (sekce "Důležité upozornění") a v patičce,
+// ať je hned jasné, že jde o satiru/hru, ne o skutečné hazardní hraní, a že
+// G nemají peněžní hodnotu.
 export const DISCLAIMER =
   "GEMBL.cz je satirický zábavní projekt. Nejde o skutečné hazardní hraní — výhra není možná a nelze získat žádnou reálnou cenu. G jsou herní kredity, které lze dokoupit za reálné peníze, ale nemají peněžní hodnotu a nelze je vybrat ani směnit za peníze nebo věcné ceny.";
 
+// /hry a /o-projektu byly zrušené (obsah /o-projektu se přesunul jako další
+// sekce na /jak-to-funguje), takže v menu zůstávají jen živé stránky.
 export const NAV_LINKS = [
   { href: "/automaty", label: "Automaty" },
-  { href: "/hry", label: "Hry" },
   { href: "/jak-to-funguje", label: "Jak to funguje" },
-  { href: "/o-projektu", label: "O projektu" },
 ] as const;
 
 // Anonymní/nový hráč (bez přihlášení) startuje na 100 G — přihlášením

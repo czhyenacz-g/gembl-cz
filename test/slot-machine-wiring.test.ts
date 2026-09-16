@@ -90,12 +90,13 @@ test("SlotMachine.tsx: varovný text o nemožnosti výhry je vždy přítomný a
   );
 });
 
-test("SlotMachine.tsx: reset vyžaduje potvrzovací krok (showResetConfirm), ne rovnou akci, a vrátí sázku na MIN_BET", () => {
-  assert.match(source, /onClick=\{\(\) => setShowResetConfirm\(true\)\}/);
-  assert.match(source, /Opravdu chceš resetovat kariéru\?/);
-  assert.match(source, /onClick=\{handleResetConfirm\}/);
-  const resetHandler = /function handleResetConfirm\(\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
-  assert.match(resetHandler, /setBet\(MIN_BET\);/);
+test("SlotMachine.tsx: reset kariéry tu záměrně NENÍ — přesunul se na vlastní stránku /reset (viz test/reset-page.test.ts)", () => {
+  assert.doesNotMatch(source, /RESETOVAT KARIÉRU/);
+  assert.doesNotMatch(source, /handleResetConfirm/);
+  assert.doesNotMatch(source, /showResetConfirm/);
+  // Bez resetu tu není co mazat — stav se přes storage.ts jen čte a ukládá při hře.
+  assert.doesNotMatch(source, /resetPlayerState/);
+  assert.doesNotMatch(source, /createInitialPlayerState/);
 });
 
 test("SlotMachine.tsx: nově odemknuté achievementy se pushnou jako toasty po každém spinu", () => {
@@ -109,11 +110,8 @@ test("SlotMachine.tsx: žádný setInterval (polling) — jen jednorázové setT
   assert.doesNotMatch(source, /setInterval/);
 });
 
-test("SlotMachine.tsx: čte/ukládá stav přes storage.ts (loadPlayerState/savePlayerState/resetPlayerState/createInitialPlayerState), ne přímo localStorage", () => {
-  assert.match(
-    source,
-    /import \{ createInitialPlayerState, loadPlayerState, resetPlayerState, savePlayerState \} from "\.\.\/\.\.\/\.\.\/lib\/casino\/storage"/
-  );
+test("SlotMachine.tsx: čte/ukládá stav přes storage.ts (loadPlayerState/savePlayerState), ne přímo localStorage", () => {
+  assert.match(source, /import \{ loadPlayerState, savePlayerState \} from "\.\.\/\.\.\/\.\.\/lib\/casino\/storage"/);
   assert.doesNotMatch(source, /localStorage\.(get|set)Item/);
 });
 
@@ -135,11 +133,24 @@ test("SlotMachine.tsx: nedokončená dávka se odešle při odchodu ze stránky 
   assert.match(source, /if \(document\.visibilityState === "hidden"\) flushPendingStats\(\);/);
 });
 
-test("SlotMachine.tsx: reset odešle nedokončenou dávku SE započítaným resetem (jeden request, ne dva)", () => {
-  const resetHandler = /function handleResetConfirm\(\)[\s\S]*?\n  \}\n/.exec(source)?.[0] ?? "";
-  assert.match(resetHandler, /flushPendingStats\(1\);/);
+test("SlotMachine.tsx: odehraná dávka se reportuje bez resetu (resets: 0) — reset kariéry řeší samostatná stránka /reset", () => {
+  const flushFn = /const flushPendingStats = useCallback\(\(\) => \{[\s\S]*?\n {2}\}, \[\]\);/.exec(source)?.[0] ?? "";
+  assert.match(
+    flushFn,
+    /reportGameStatsDeltaClient\(\{ game: GAME_ID, spins: pending\.spins, wagered: pending\.wagered, won: pending\.won, resets: 0 \}\)/
+  );
+  assert.doesNotMatch(source, /resets: 1/);
+  assert.doesNotMatch(source, /flushPendingStats\(1\)/);
 });
 
-test("SlotMachine.tsx: flushPendingStats má stabilní identitu (useCallback, prázdné deps)", () => {
-  assert.match(source, /const flushPendingStats = useCallback\(\(resets = 0\) => \{[\s\S]*?\n {2}\}, \[\]\);/);
+test("SlotMachine.tsx: nedokončená dávka se odešle i při odchodu na jinou route (unmount) — typicky odchod na /reset", () => {
+  const cleanup = /return \(\) => \{\s*document\.removeEventListener\("visibilitychange", handleVisibilityChange\);\s*window\.removeEventListener\("pagehide", handlePageHide\);\s*flushPendingStats\(\);\s*\};/.exec(
+    source
+  )?.[0] ?? "";
+  assert.ok(cleanup, "cleanup efektu musí po odebrání listenerů ještě flushnout nedokončenou dávku");
+});
+
+test("SlotMachine.tsx: flushPendingStats má stabilní identitu (useCallback, prázdné deps) a je idempotentní (po odeslání pending vynuluje)", () => {
+  assert.match(source, /const flushPendingStats = useCallback\(\(\) => \{[\s\S]*?\n {2}\}, \[\]\);/);
+  assert.match(source, /pendingStatsRef\.current = \{ spins: 0, wagered: 0, won: 0 \};/);
 });

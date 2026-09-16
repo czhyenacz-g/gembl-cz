@@ -11,7 +11,7 @@ import { checkNewAchievements, type Achievement } from "../../../lib/casino/achi
 import { pickRandomMessage } from "../../../lib/casino/messages";
 import { reportGameStatsDeltaClient } from "../../../lib/casino/report-stats-client";
 import { spin } from "../../../lib/casino/slot-engine";
-import { createInitialPlayerState, loadPlayerState, resetPlayerState, savePlayerState } from "../../../lib/casino/storage";
+import { loadPlayerState, savePlayerState } from "../../../lib/casino/storage";
 import type { PlayerState, SlotSymbol } from "../../../lib/casino/types";
 import { BET_STEP, MAX_BET, MIN_BET } from "../../config/site";
 import { maxAffordableBet } from "../../../lib/wallet/bet";
@@ -104,7 +104,7 @@ function classifySpinResult(result: ReturnType<typeof spin>): "near_miss" | "los
 type SlotMachineProps = {
   /** Když true (+ `layout`), vykreslí jen holé živé prvky napozicované
    * podle `layout` (viz app/(site)/casino/stage/) místo vlastního
-   * `gembl-block` boxu se statistikami/resetem — pro overlay nad /casino
+   * `gembl-block` boxu se statistikami — pro overlay nad /casino
    * artwork skinem. Veškerá logika/state výš je STEJNÁ v obou režimech,
    * mění se jen JSX na konci komponenty (viz zadání "měnit primárně
    * prezentační vrstvu, ne business logiku"). */
@@ -129,7 +129,6 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
   const [jackpotFlash, setJackpotFlash] = useState(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [localShowCreditGate, setLocalShowCreditGate] = useState(false);
   const showCreditGate = creditGate ? creditGate.open : localShowCreditGate;
   const setShowCreditGate = creditGate ? creditGate.onOpenChange : setLocalShowCreditGate;
@@ -176,16 +175,21 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
 
   // Stabilní identita (useCallback, prázdné deps) — čte/píše jen refy,
   // takže je bezpečné ji použít v efektu níž bez re-registrace listenerů.
-  const flushPendingStats = useCallback((resets = 0) => {
+  // Idempotentní: po odeslání se pending vynuluje, takže případné druhé
+  // volání (pagehide + unmount) pošle už jen prázdnou dávku a hned skončí.
+  const flushPendingStats = useCallback(() => {
     const pending = pendingStatsRef.current;
-    if (pending.spins === 0 && pending.wagered === 0 && pending.won === 0 && resets === 0) return;
+    if (pending.spins === 0 && pending.wagered === 0 && pending.won === 0) return;
 
-    reportGameStatsDeltaClient({ game: GAME_ID, spins: pending.spins, wagered: pending.wagered, won: pending.won, resets });
+    reportGameStatsDeltaClient({ game: GAME_ID, spins: pending.spins, wagered: pending.wagered, won: pending.won, resets: 0 });
     pendingStatsRef.current = { spins: 0, wagered: 0, won: 0 };
   }, []);
 
   // Odešle, co se zatím nashromáždilo, i když hráč nedohraje na násobek
-  // 10 spinů — jinak by se poslední nedokončená dávka ztratila.
+  // 10 spinů — jinak by se poslední nedokončená dávka ztratila. Kromě
+  // zavření/skrytí tabu (pagehide/visibilitychange) se flushuje i při
+  // odchodu na jinou route (unmount) — typicky odchod na /reset, kde se
+  // kariéra maže; tam by se jinak poslední nedokončené spiny ztratily.
   useEffect(() => {
     function handleVisibilityChange() {
       if (document.visibilityState === "hidden") flushPendingStats();
@@ -199,6 +203,7 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("pagehide", handlePageHide);
+      flushPendingStats();
     };
   }, [flushPendingStats]);
 
@@ -310,28 +315,6 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
     savePlayerState(finalState);
     setPlayer(finalState);
     finishSpinAnimation(result, wagered);
-  }
-
-  function handleResetConfirm() {
-    // Odešle, co se zatím nashromáždilo, a ve STEJNÉ dávce i sám reset —
-    // ne dva samostatné requesty.
-    flushPendingStats(1);
-
-    // U přihlášeného hráče reset smaže jen lokální statistiky/achievementy
-    // (kosmetika) — kredity se NIKDY nevrací na STARTING_CREDITS, protože
-    // ty jsou u přihlášených účtů reálně vázané na serverový zůstatek
-    // (welcome bonus + Stripe nákupy). Jinak by "reset kariéry" byl
-    // triviální způsob, jak si "vyresetovat" zpět kredity zdarma.
-    const fresh: PlayerState =
-      session.status === "authenticated" ? { ...createInitialPlayerState(), credits: session.credits } : resetPlayerState();
-    if (session.status === "authenticated") savePlayerState(fresh);
-
-    setPlayer(fresh);
-    setBet(MIN_BET);
-    setReels(null);
-    setResultMessage(null);
-    setJackpotFlash(false);
-    setShowResetConfirm(false);
   }
 
   if (!mounted || !player) {
@@ -558,8 +541,10 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
           )}
         </div>
 
-        {/* Statistiky + reset — na mobilu panel pod ovládáním, od `md` overlay
-            do připravené spodní plochy artworku. */}
+        {/* Statistiky — na mobilu panel pod ovládáním, od `md` overlay do
+            připravené spodní plochy artworku. Reset kariéry tu záměrně není
+            (aby se omylem nekliklo během hraní) — má vlastní stránku /reset,
+            viz app/(site)/reset/. */}
         <div
           className={`${OVERLAY_POSITION} flex flex-col items-center justify-center gap-2 border-2 border-gembl-ink bg-gembl-paper-dark px-3 py-3 md:gap-[clamp(2px,0.8vw,8px)] md:border-0 md:bg-transparent md:px-[2%] md:py-0`}
           style={overlayStyle(STATS_RECT)}
@@ -571,38 +556,6 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
             <StatItem label="Vyhráno" value={`${player.totalWon.toLocaleString("cs-CZ")} G`} />
             <StatItem label="Čistá ztráta" value={`${netLoss.toLocaleString("cs-CZ")} G`} />
           </dl>
-
-          {!showResetConfirm ? (
-            <button
-              type="button"
-              onClick={() => setShowResetConfirm(true)}
-              className="min-h-[40px] border border-gembl-ink px-4 py-1 text-sm uppercase tracking-wide text-gembl-muted transition hover:border-gembl-red hover:text-gembl-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-ink md:min-h-[clamp(1.4rem,2.6vw,2.25rem)] md:px-[clamp(0.5rem,1.2vw,1rem)] md:py-0.5 md:text-[clamp(0.5rem,1vw,0.75rem)]"
-            >
-              RESETOVAT KARIÉRU
-            </button>
-          ) : (
-            <div className="mt-1 w-full border-2 border-gembl-red bg-gembl-paper p-3 md:absolute md:left-1/2 md:top-1/2 md:z-20 md:mt-0 md:w-[min(92%,22rem)] md:-translate-x-1/2 md:-translate-y-1/2">
-              <p className="text-center text-sm text-gembl-ink md:text-[clamp(0.6rem,1.2vw,0.85rem)]">
-                Opravdu chceš resetovat kariéru? Tohle nevratně smaže tvůj postup.
-              </p>
-              <div className="mt-2 flex justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleResetConfirm}
-                  className="min-h-[40px] border-2 border-gembl-ink bg-gembl-red px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gembl-paper shadow-hard-sm transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none md:min-h-[clamp(1.6rem,3vw,2.25rem)] md:px-[clamp(0.5rem,1.2vw,1rem)] md:py-1 md:text-[clamp(0.55rem,1.1vw,0.8rem)]"
-                >
-                  Ano, resetovat
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowResetConfirm(false)}
-                  className="min-h-[40px] border border-gembl-ink px-4 py-2 text-xs text-gembl-ink transition hover:bg-gembl-paper-dark md:min-h-[clamp(1.6rem,3vw,2.25rem)] md:px-[clamp(0.5rem,1.2vw,1rem)] md:py-1 md:text-[clamp(0.55rem,1.1vw,0.8rem)]"
-                >
-                  Zrušit
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
