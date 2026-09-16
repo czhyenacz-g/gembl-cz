@@ -58,8 +58,23 @@ describe("MenuOverlay.tsx — aktivní položka podle pathname", () => {
     assert.match(fn, /pathname === "\/casino" && href === "\/automaty"/);
   });
 
-  test("aktivní řádek se renderuje jako neklikací <div aria-current='page'>, ne <Link>", () => {
-    assert.match(source, /if \(active\) \{/);
-    assert.match(source, /aria-current="page"/);
+  test("aktivní řádek je TAKÉ klikatelný <Link> (na /casino vede 'Automaty' do hry), se zachovaným aria-current", () => {
+    const activeBranch = /if \(active && item\.href\) \{[\s\S]*?\n {2}\}/.exec(source)?.[0] ?? "";
+    assert.ok(activeBranch.length > 0, "aktivní větev musí existovat");
+    assert.match(activeBranch, /<Link/);
+    assert.match(activeBranch, /href=\{item\.href\}/);
+    assert.match(activeBranch, /aria-current="page"/);
+    // Vizuál aktivního řádku (světlý text na tmavém vytištěném řádku) zůstává.
+    assert.match(activeBranch, /text-gembl-paper/);
+    // A je poznat, že se dá kliknout (hover + focus ring).
+    assert.match(activeBranch, /hover:bg-white\/10/);
+    assert.match(activeBranch, /focus-visible:ring-2/);
+  });
+
+  test("řádek bez href zůstává neklikatelný, i kdyby byl aktivní", () => {
+    const disabledBranch = /return \(\s*<span[\s\S]*?<\/span>\s*\);/.exec(source)?.[0] ?? "";
+    assert.ok(disabledBranch.length > 0, "disabled větev musí existovat");
+    assert.match(disabledBranch, /aria-disabled="true"/);
+    assert.doesNotMatch(disabledBranch, /<Link/);
   });
 });

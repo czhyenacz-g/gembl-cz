@@ -44,11 +44,22 @@ function MenuRow({ item, rect, active }: { item: ClassicMenuItem; rect: SkinRect
   const baseClass =
     "flex h-full w-full items-center justify-center px-2 font-serif text-sm font-bold uppercase tracking-wide transition";
 
-  if (active) {
+  // Aktivní položka je TAKÉ KLIKATELNÁ (viz zadání) — na /casino je aktivní
+  // "Automaty", což je zároveň vstup do hry, takže musí jít kliknout stejně
+  // jako ostatní řádky. Vizuálně zůstává zvýrazněná (světlý text na tmavém
+  // vytištěném řádku artworku) a dostane jen hover/focus odezvu, aby bylo
+  // poznat, že je to odkaz. `aria-current="page"` na <Link> zůstává (říká
+  // "tohle je aktuální stránka/sekce", ne že by se nedalo kliknout).
+  if (active && item.href) {
     return (
-      <div style={rectStyle(rect)} className={`${baseClass} text-gembl-paper`} aria-current="page">
+      <Link
+        href={item.href}
+        style={rectStyle(rect)}
+        aria-current="page"
+        className={`${baseClass} text-gembl-paper hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper focus-visible:ring-offset-0`}
+      >
         {item.label}
-      </div>
+      </Link>
     );
   }
 
@@ -64,10 +75,13 @@ function MenuRow({ item, rect, active }: { item: ClassicMenuItem; rect: SkinRect
     );
   }
 
+  // Bez href (žádná route) — neklikatelné, i kdyby na téhle route "vyšlo"
+  // jako aktivní (nemá kam vést).
   return (
     <span
       style={rectStyle(rect)}
       aria-disabled="true"
+      aria-current={active ? "page" : undefined}
       className={`${baseClass} cursor-not-allowed gap-1.5 text-gembl-muted`}
     >
       {item.label}
