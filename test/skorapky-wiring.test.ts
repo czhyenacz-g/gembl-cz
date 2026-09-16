@@ -142,3 +142,28 @@ describe("HRÁT ZNOVU", () => {
     assert.match(fn, /setPhase\("idle"\);/);
   });
 });
+
+describe("animace míchání kelímků (globals.css)", () => {
+  const css = readFileSync(fileURLToPath(new URL("../app/globals.css", import.meta.url)), "utf8");
+  const keyframes = /@keyframes shell-shake \{[\s\S]*?\n\}/.exec(css)?.[0] ?? "";
+
+  test("kelímky při míchání výrazně vibrují (větší amplituda + náklon), ale zůstávají na svých pozicích", () => {
+    assert.ok(keyframes.length > 0, "keyframes shell-shake musí existovat");
+    // výrazné vibrování (dřív jen ±2 px bez rotace)
+    assert.match(keyframes, /var\(--shell-shake-x, 7px\)/);
+    assert.match(keyframes, /rotate\(-3\.5deg\)/);
+    assert.match(keyframes, /rotate\(3\.5deg\)/);
+    // pořád jen "shake" kolem vlastní pozice — žádné posouvání mimo slot
+    assert.doesNotMatch(keyframes, /translateY/);
+    assert.doesNotMatch(keyframes, /translate\(/);
+  });
+
+  test("amplituda vibrace je responzivní — nastavuje ji Cup.tsx (na mobilu je kelímek ~4× menší)", () => {
+    const cupSource = readFileSync(fileURLToPath(new URL("../app/(site)/skorapky/Cup.tsx", import.meta.url)), "utf8");
+    assert.match(cupSource, /"--shell-shake-x": "clamp\(3px, 0\.55vw, 8px\)"/);
+  });
+
+  test("animace je rychlá smyčka (vibrace), ne pomalý posun", () => {
+    assert.match(css, /\.animate-shell-shake \{\s*animation: shell-shake 0\.15s ease-in-out infinite;\s*\}/);
+  });
+});

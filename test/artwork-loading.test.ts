@@ -2,6 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { nextArtworkStatus } from "../app/components/stage/artwork-status.ts";
 
 // Zdrojová kontrola loading vrstvy artwork stageů (stejný vzor jako
 // universal-stage.test.ts — žádný DOM/browser harness v tomhle starteru).
@@ -37,6 +38,23 @@ describe("use-artwork-ready.ts — detekce skutečného načtení backgroundu", 
     assert.match(hookSource, /window\.setTimeout\(\(\) => settle\("failed"\), SAFETY_TIMEOUT_MS\)/);
     assert.match(hookSource, /window\.clearTimeout\(safety\);/);
     assert.match(hookSource, /image\.onload = null;/);
+  });
+
+  test("REGRESE: `failed` nesmí přepsat už načtenou scénu (`ready` je konečný stav)", () => {
+    // Safety timeout volá `failed` i 9 s po úspěšném onloadu — přesně tenhle
+    // přechod dřív ukazoval „Nepodařilo se načíst scénu.“ uprostřed hry.
+    assert.equal(nextArtworkStatus("ready", "failed"), "ready");
+    assert.equal(nextArtworkStatus("failed", "failed"), "failed");
+  });
+
+  test("přechody stavu: loading → ready/failed, pozdní ready po failed stav spraví", () => {
+    assert.equal(nextArtworkStatus("loading", "ready"), "ready");
+    assert.equal(nextArtworkStatus("loading", "failed"), "failed");
+    assert.equal(nextArtworkStatus("failed", "ready"), "ready");
+  });
+
+  test("settle používá nextArtworkStatus (jediný zdroj pravidel přechodů)", () => {
+    assert.match(hookSource, /setStatus\(\(current\) => nextArtworkStatus\(current, next\)\);/);
   });
 
   test("stav se resetuje při změně src (jiný skin/artwork)", () => {

@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { nextArtworkStatus, type ArtworkStatus } from "./artwork-status.ts";
+
+// Stavová logika (typy + přechody) žije v artwork-status.ts bez Reactu, aby
+// se dala testovat přímo; tenhle hook ji jen napojuje na skutečné načtení.
+export type { ArtworkStatus } from "./artwork-status.ts";
 
 // Dokud není hlavní artwork stageu SKUTEČNĚ načtený, overlaye se nesmí
 // ukázat (jinak na pomalém připojení probliknou texty/tlačítka na prázdném
@@ -10,7 +15,6 @@ import { useEffect, useState } from "react";
 // Používá to jak herní stage (app/components/stage/ArtworkStage.tsx), tak
 // samostatné herní scény (app/components/stage/ArtworkScene.tsx) — jedno
 // společné místo, žádný loader per stránka.
-export type ArtworkStatus = "loading" | "ready" | "failed";
 
 // Pojistka, aby loader nezůstal viset navždy (rozbitý/404 asset, zaseknutá
 // síť). NENÍ to hlavní mechanismus — normálně stav přepne `onload`.
@@ -31,8 +35,11 @@ export function useArtworkReady(src: string | null): ArtworkStatus {
     const image = new window.Image();
     let cancelled = false;
 
+    // `settle` nikdy nepřepíše už načtený stav — viz nextArtworkStatus výš
+    // (řeší přesně ten regresní bug s hláškou „Nepodařilo se načíst scénu.“).
     function settle(next: ArtworkStatus) {
-      if (!cancelled) setStatus(next);
+      if (cancelled) return;
+      setStatus((current) => nextArtworkStatus(current, next));
     }
 
     image.onload = () => settle("ready");
@@ -44,6 +51,8 @@ export function useArtworkReady(src: string | null): ArtworkStatus {
     // (žádné zbytečné bliknutí ani timeout — viz zadání "cached asset").
     if (image.complete) settle(image.naturalWidth > 0 ? "ready" : "failed");
 
+    // Pojistka: když se do 9 s nic nestalo, teprve TEĎ se stav přepne na
+    // `failed` — a jen pokud jsme pořád `loading` (viz guard v `settle`).
     const safety = window.setTimeout(() => settle("failed"), SAFETY_TIMEOUT_MS);
 
     return () => {

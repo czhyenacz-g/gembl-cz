@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import type { CupIndex } from "../../../lib/skorapky/types.ts";
 
 const CUP_LABELS: Record<CupIndex, string> = { 0: "levý", 1: "prostřední", 2: "pravý" };
@@ -67,6 +68,9 @@ export default function Cup({
         disabled={!selectable}
         onClick={() => onSelect(position)}
         aria-label={selectable ? `Vybrat ${CUP_LABELS[position]} kelímek` : `${CUP_LABELS[position]} kelímek`}
+        // Amplituda vibrace při míchání (viz @keyframes shell-shake) —
+        // responzivní, aby na malém kelímku nepůsobila jako odlet mimo slot.
+        style={{ "--shell-shake-x": "clamp(3px, 0.55vw, 8px)" } as CSSProperties}
         className={`absolute bottom-0 left-[11%] z-10 w-[78%] cursor-pointer rounded-t-full transition-transform duration-300 ease-out enabled:hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-red disabled:cursor-not-allowed ${
           raised ? "-translate-y-[60%]" : "translate-y-0"
         } ${highlighted ? "animate-shell-shake ring-4 ring-gembl-red" : ""} ${selected ? "ring-4 ring-amber-400" : ""}`}

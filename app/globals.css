@@ -64,18 +64,29 @@
   }
 }
 
-/* Skořápky shuffling — drobný shake (viz Cup.tsx), max pár px, žádné
-   výrazné přesouvání (viz zadání "kelímky se fyzicky nepřehazují"). */
+/* Skořápky shuffling — výrazné vibrování kelímku (viz Cup.tsx): výchylka
+   přes osu X + náklon ±3,5°, ať je míchání pořádně vidět. Kelímky se pořád
+   fyzicky NEPŘEHAZUJÍ (zůstávají na svých pozicích, jen vibrují) — viz
+   zadání "kelímky se fyzicky nepřehazují".
+   Amplituda X je responzivní přes `--shell-shake-x` (nastavuje Cup.tsx):
+   kelímek je na mobilu ~4× menší, takže pevná hodnota by tam působila,
+   jako by kelímek odlétal mimo svůj slot. */
 @keyframes shell-shake {
   0%,
   100% {
-    transform: translateX(0);
+    transform: translateX(0) rotate(0deg);
   }
-  25% {
-    transform: translateX(-2px);
+  20% {
+    transform: translateX(calc(-1 * var(--shell-shake-x, 7px))) rotate(-3.5deg);
   }
-  75% {
-    transform: translateX(2px);
+  40% {
+    transform: translateX(var(--shell-shake-x, 7px)) rotate(3.5deg);
+  }
+  60% {
+    transform: translateX(calc(-0.85 * var(--shell-shake-x, 7px))) rotate(-2.5deg);
+  }
+  80% {
+    transform: translateX(calc(0.85 * var(--shell-shake-x, 7px))) rotate(2.5deg);
   }
 }
 
