@@ -146,8 +146,17 @@ describe("Herní scény používají společný ArtworkScene (žádný vlastní 
       assert.match(source, /<ArtworkScene/);
       assert.match(source, /loadingLabel="/);
       assert.match(source, /<\/ArtworkScene>/);
-      assert.doesNotMatch(source, /import Image from "next\/image"/);
+      // Scéna si nedělá vlastní aspect-ratio container (to řeší ArtworkScene).
       assert.doesNotMatch(source, /aspectRatio: `\$\{SCENE_WIDTH\}/);
+      // Hlavní artwork jde přes ArtworkScene. Vlastní next/image smí scéna
+      // použít jen na další vizuální vrstvy (u /automaty stavové obrázky
+      // páky) — nikdy na samotný artwork scény.
+      if (route === "/automaty") {
+        assert.match(source, /<ArtworkScene[\s\S]*?src=\{SCENE_SRC\}/);
+        assert.match(source, /LEVER_FRAMES/);
+      } else {
+        assert.doesNotMatch(source, /import Image from "next\/image"/);
+      }
     });
   }
 
@@ -192,5 +201,17 @@ describe("globals.css — loader animace", () => {
     assert.match(globalsSource, /@keyframes gembl-fade-in/);
     assert.match(globalsSource, /\.animate-gembl-fade-in \{/);
     assert.match(globalsSource, /@media \(prefers-reduced-motion: reduce\)/);
+  });
+});
+
+describe("/automaty: páka jako stavové obrázky", () => {
+  const source = read("../app/(site)/automaty/SlotMachine.tsx");
+
+  test("používá právě mid/down stavové obrázky; základní (up) zůstává artwork scény", () => {
+    assert.match(source, /mid: "\/skins\/automaty\/automaty-lever-mid\.webp",/);
+    assert.match(source, /down: "\/skins\/automaty\/automaty-lever-down\.webp",/);
+    // `up` stav nemá vlastní obrázek — je to základní artwork scény.
+    assert.doesNotMatch(source, /up: "\/skins/);
+    assert.match(source, /const SCENE_SRC = "\/skins\/automaty\/automaty\.webp";/);
   });
 });

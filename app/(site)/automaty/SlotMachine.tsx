@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import CreditGateModal from "../../components/wallet/CreditGateModal";
 import { notifySessionChanged, useSession } from "../../../lib/auth/use-session-client";
 import { useAudio } from "../../../lib/audio/AudioProvider.tsx";
@@ -59,6 +60,26 @@ const REEL_SLOTS: Array<{ left: number; top: number; width: number; height: numb
 ];
 /** Připravená plocha pro ovládání (pod válci) a pro statistiky (úplně dole). */
 const CONTROL_RECT = { left: 25, top: 61, width: 52, height: 12.5 };
+
+// PÁKA = tři stavové obrázky. `up` je základní artwork scény (nezměněný),
+// `mid`/`down` jsou další fáze zatažení jako vrstvy NAD ním — žádná
+// animační knihovna, jen přepínání viditelnosti (viz zadání "KISS").
+const LEVER_FRAMES = {
+  mid: "/skins/automaty/automaty-lever-mid.webp",
+  down: "/skins/automaty/automaty-lever-down.webp",
+} as const;
+// Časování sekvence up → mid → down → mid → up (ms od zatažení). `mid` se
+// nastaví HNED (ať páka zareaguje okamžitě na klik), spin startuje ve chvíli,
+// kdy je páka dole (LEVER_STEP_DOWN_MS).
+const LEVER_STEP_DOWN_MS = 200;
+const LEVER_STEP_BACK_MID_MS = 340;
+const LEVER_STEP_UP_MS = 470;
+// Neviditelný hitbox nad páku v % scény — měřeno z rozdílů mezi obrázky
+// (páka se hýbe v x 75–87,5 %, y 27–64 %); začíná až za pravým okrajem
+// ovládacího panelu (x 77 %), ať si nekonkurují.
+const LEVER_RECT = { left: 76.5, top: 26, width: 13.5, height: 40 };
+// Jak daleko (px) musí ukazatel táhnout dolů, aby páka dojela "na doraz".
+const LEVER_DRAG_DOWN_PX = 18;
 const STATS_RECT = { left: 22.2, top: 79.4, width: 55.6, height: 15.7 };
 
 type SceneRect = { left: number; top: number; width: number; height: number };
@@ -143,6 +164,14 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
   const setShowCreditGate = creditGate ? creditGate.onOpenChange : setLocalShowCreditGate;
   const toastKeyRef = useRef(0);
   const pendingStatsRef = useRef({ spins: 0, wagered: 0, won: 0 });
+  // Páka: `leverFrame` je jen vizuální stav (up = základní artwork).
+  // `leverBusyRef` je synchronní zámek (jako ostatní refy v projektu), aby
+  // během běžící animace nešlo zatáhnout znovu, a `leverTimeoutsRef` drží
+  // naplánované kroky, ať je umíme uklidit při unmountu.
+  const [leverFrame, setLeverFrame] = useState<"up" | "mid" | "down">("up");
+  const leverBusyRef = useRef(false);
+  const leverTimeoutsRef = useRef<number[]>([]);
+  const leverDragRef = useRef<{ startY: number; fired: boolean } | null>(null);
   // Stejný zdroj pravdy jako ArtworkScene níž (embedded režim = žádný
   // vlastní artwork → null, hned `ready`): dokud se scéna nenačte, držíme
   // ovládání/statistiky inert, ať se na ně nedá omylem kliknout ani
@@ -241,6 +270,81 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
       flushPendingStats();
     };
   }, [flushPendingStats]);
+
+  // --- Páka: animace přepínáním obrázků + interakce ---------------------
+
+  function clearLeverTimeouts() {
+    for (const id of leverTimeoutsRef.current) window.clearTimeout(id);
+    leverTimeoutsRef.current = [];
+  }
+
+  function scheduleLeverFrame(frame: "up" | "mid" | "down", delayMs: number) {
+    leverTimeoutsRef.current.push(window.setTimeout(() => setLeverFrame(frame), delayMs));
+  }
+
+  /** Návrat páky nahoru (down/mid → mid → up) + odemčení vstupu. */
+  function scheduleLeverReturn() {
+    scheduleLeverFrame("mid", LEVER_STEP_BACK_MID_MS);
+    scheduleLeverFrame("up", LEVER_STEP_UP_MS);
+    leverTimeoutsRef.current.push(
+      window.setTimeout(() => {
+        leverBusyRef.current = false;
+      }, LEVER_STEP_UP_MS + 30)
+    );
+  }
+
+  /**
+   * Klik / klávesa = plné zatažení páky: up → mid → down (tady startuje
+   * spin) → mid → up. Během animace i během spinu je vstup ignorovaný.
+   */
+  function pullLever() {
+    if (leverBusyRef.current || spinning) return;
+    leverBusyRef.current = true;
+    clearLeverTimeouts();
+    setLeverFrame("mid");
+    scheduleLeverFrame("down", LEVER_STEP_DOWN_MS);
+    scheduleLeverReturn();
+    leverTimeoutsRef.current.push(window.setTimeout(() => handleSpin(), LEVER_STEP_DOWN_MS));
+  }
+
+  // Tažení páky: pointerdown = uchopení (mid), tah dolů = down (+ spin),
+  // puštění = návrat přes mid do up. Myší klik projde stejnou cestou
+  // (pointerup), takže se spin nikdy nespustí dvakrát.
+  function handleLeverPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (leverBusyRef.current || spinning) return;
+    leverBusyRef.current = true;
+    leverDragRef.current = { startY: event.clientY, fired: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    clearLeverTimeouts();
+    setLeverFrame("mid");
+  }
+
+  function handleLeverPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = leverDragRef.current;
+    if (!drag) return;
+    const pulledToBottom = event.clientY - drag.startY >= LEVER_DRAG_DOWN_PX;
+    setLeverFrame(pulledToBottom ? "down" : "mid");
+    if (pulledToBottom && !drag.fired) {
+      // Spin ve chvíli, kdy je páka dole (a jen jednou za gesto).
+      drag.fired = true;
+      handleSpin();
+    }
+  }
+
+  function handleLeverPointerUp() {
+    const drag = leverDragRef.current;
+    if (!drag) return;
+    leverDragRef.current = null;
+    // Klik nebo malý tah (páka nedojela dolů) → dojet na doraz a spustit spin.
+    if (!drag.fired) {
+      setLeverFrame("down");
+      handleSpin();
+    }
+    scheduleLeverReturn();
+  }
+
+  // Při odchodu ze stránky nesmí zůstat naplánované kroky animace.
+  useEffect(() => clearLeverTimeouts, []);
 
   function pushToast(title: string) {
     const key = ++toastKeyRef.current;
@@ -478,7 +582,50 @@ export default function SlotMachine({ embedded, layout, creditGate }: SlotMachin
           loadingLabel="Spouštíme automat…"
           className="relative w-full"
         >
-          {/* Zpět a logo GEMBL.CZ — klikací overlaye nad vytištěnými. */}
+          {/* Páka — dvě stavové vrstvy NAD základním artworkem (up). Obě jsou
+            v DOM pořád (i když jsou neviditelné), takže se přednačtou hned se
+            scénou a přepnutí při zatažení je okamžité, bez bliknutí. Bez
+            z-indexu = kreslí se nad artworkem, ale pod z-10 overlaye
+            (válce, tlačítka), které mají být vždy navrchu. */}
+        {(["mid", "down"] as const).map((frame) => (
+          <Image
+            key={frame}
+            src={LEVER_FRAMES[frame]}
+            alt=""
+            aria-hidden="true"
+            width={SCENE_WIDTH}
+            height={SCENE_HEIGHT}
+            priority
+            className={`pointer-events-none absolute inset-0 h-full w-full object-contain ${
+              leverFrame === frame ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        ))}
+
+        {/* Neviditelný hitbox páky. Klik/Enter = plné zatažení, tažení dolů =
+            páka na doraz. Je záměrně PŘED ovládacím panelem, takže kdyby se
+            okraje potkaly, klik vyhraje panel. */}
+        <button
+          type="button"
+          aria-label="Zatáhnout za páku"
+          aria-disabled={spinning || leverBusyRef.current || undefined}
+          style={pct(LEVER_RECT)}
+          onPointerDown={handleLeverPointerDown}
+          onPointerMove={handleLeverPointerMove}
+          onPointerUp={handleLeverPointerUp}
+          onPointerCancel={handleLeverPointerUp}
+          onClick={(event) => {
+            // Klávesnice (Enter/mezerník) posílá click s detail === 0; myší
+            // klik už zpracovaly pointer handlery, takže tudy nesmí projít
+            // podruhé.
+            if (event.detail === 0) pullLever();
+          }}
+          className={`absolute z-10 touch-none rounded-[var(--gembl-radius)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gembl-paper ${
+            spinning ? "cursor-not-allowed" : "cursor-grab hover:bg-white/5 active:cursor-grabbing"
+          }`}
+        />
+
+        {/* Zpět a logo GEMBL.CZ — klikací overlaye nad vytištěnými. */}
           <Link
             href="/casino"
             aria-label="Zpět do kasina"
